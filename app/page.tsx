@@ -2,297 +2,577 @@
 
 import { useState } from "react";
 import Navbar from "@/app/components/Navbar";
-import { Search, Play } from "lucide-react";
+import { Search, Heart, Sparkles, Clock, ChefHat } from "lucide-react";
 
-const featuredTrailers = [
+const featuredRecipes = [
   {
     id: 1,
-    title: "Avatar Official Trailer",
-    category: "Sci-Fi",
-    thumbnail: "https://img.youtube.com/vi/5PSNL1qE6VY/hqdefault.jpg",
+    title: "Cherry Cream Cake",
+    category: "Dessert",
+    time: "45 mins",
+    difficulty: "Medium",
+    thumbnail:
+      "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=900&q=80",
   },
   {
     id: 2,
-    title: "Wednesday Official Trailer",
-    category: "Fantasy",
-    thumbnail: "https://img.youtube.com/vi/Di310WS8zLk/hqdefault.jpg",
+    title: "Strawberry Pancakes",
+    category: "Breakfast",
+    time: "25 mins",
+    difficulty: "Easy",
+    thumbnail:
+      "https://images.unsplash.com/photo-1528207776546-365bb710ee93?auto=format&fit=crop&w=900&q=80",
   },
   {
     id: 3,
-    title: "Inside Out 2 Official Trailer",
-    category: "Animation",
-    thumbnail: "https://img.youtube.com/vi/LEjhY15eCx0/hqdefault.jpg",
+    title: "Creamy Tomato Pasta",
+    category: "Pasta",
+    time: "30 mins",
+    difficulty: "Easy",
+    thumbnail:
+      "https://images.unsplash.com/photo-1621996346565-e3dbc646d9a9?auto=format&fit=crop&w=900&q=80",
   },
   {
     id: 4,
-    title: "The Batman Official Trailer",
-    category: "Action",
-    thumbnail: "https://img.youtube.com/vi/mqqft2x_Aa4/hqdefault.jpg",
+    title: "Thai Basil Chicken",
+    category: "Thai Food",
+    time: "35 mins",
+    difficulty: "Medium",
+    thumbnail:
+      "https://images.unsplash.com/photo-1562565652-a0d8f0c59eb4?auto=format&fit=crop&w=900&q=80",
   },
   {
     id: 5,
-    title: "Spider-Man: No Way Home Trailer",
-    category: "Superhero",
-    thumbnail: "https://img.youtube.com/vi/JfVOs4VSpmA/hqdefault.jpg",
+    title: "Cherry Lemon Soda",
+    category: "Drinks",
+    time: "10 mins",
+    difficulty: "Easy",
+    thumbnail:
+      "https://images.unsplash.com/photo-1544145945-f90425340c7e?auto=format&fit=crop&w=900&q=80",
   },
 ];
 
-const categories = ["Action", "Sci-Fi", "Fantasy", "Animation", "Superhero"];
+const categories = ["Dessert", "Breakfast", "Pasta", "Thai Food", "Drinks"];
 
 export default function Home() {
   const [searchText, setSearchText] = useState("");
+
+  const searchHref = searchText.trim()
+    ? `/search?query=${encodeURIComponent(searchText.trim())}`
+    : "/search";
 
   return (
     <main
       style={{
         minHeight: "100vh",
-        backgroundImage:
-          "linear-gradient(rgba(15, 23, 42, 0.55), rgba(15, 23, 42, 0.9)), url('/cinema.jpg')",
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        backgroundAttachment: "fixed",
-        color: "white",
+        background:
+          "radial-gradient(circle at top left, rgba(255, 255, 255, 0.9), transparent 28%), linear-gradient(180deg, #fff7ed 0%, #fffaf3 45%, #f9eadf 100%)",
+        color: "#5f1f23",
+        overflow: "hidden",
       }}
     >
       <Navbar />
 
-      <section
+      <div
         style={{
-          textAlign: "center",
-          padding: "100px 20px 90px",
+          position: "fixed",
+          top: 0,
+          left: 0,
+          fontSize: "120px",
+          color: "rgba(255, 255, 255, 0.96)",
+          zIndex: 0,
+          pointerEvents: "none",
+          lineHeight: 1,
         }}
       >
-        <h1
+        ❦
+      </div>
+
+      <div
+        style={{
+          position: "fixed",
+          top: 0,
+          right: 0,
+          fontSize: "120px",
+          color: "rgba(255, 255, 255, 0.96)",
+          zIndex: 0,
+          pointerEvents: "none",
+          lineHeight: 1,
+          transform: "scaleX(-1)",
+        }}
+      >
+        ❦
+      </div>
+
+      <section
+        style={{
+          position: "relative",
+          zIndex: 1,
+          padding: "30px 60px 18px",
+        }}
+      >
+        <div
           style={{
-            fontSize: "56px",
-            fontWeight: "bold",
-            marginBottom: "16px",
-            lineHeight: "1.1",
+            minHeight: "430px",
+            borderRadius: "34px",
+            border: "1px solid #ead7c4",
+            overflow: "hidden",
+            background:
+              "linear-gradient(90deg, rgba(255, 250, 243, 0.98) 0%, rgba(255, 250, 243, 0.9) 42%, rgba(255, 250, 243, 0.3) 64%), url('https://images.unsplash.com/photo-1551024506-0bccd828d307?auto=format&fit=crop&w=1800&q=80')",
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            boxShadow: "0 24px 70px rgba(95, 31, 35, 0.16)",
+            position: "relative",
           }}
         >
-          Peek the trailer before you watch.
-        </h1>
+          <div
+            style={{
+              position: "absolute",
+              inset: "18px",
+              border: "1px solid rgba(255, 255, 255, 0.9)",
+              borderRadius: "26px",
+              pointerEvents: "none",
+            }}
+          />
+
+          <div
+            style={{
+              position: "absolute",
+              top: "18px",
+              left: "22px",
+              fontSize: "74px",
+              color: "rgba(255, 255, 255, 0.92)",
+              pointerEvents: "none",
+            }}
+          >
+            ❦
+          </div>
+
+          <div
+            style={{
+              maxWidth: "700px",
+              padding: "58px 64px",
+              position: "relative",
+              zIndex: 2,
+            }}
+          >
+            <span
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
+                padding: "8px 14px",
+                borderRadius: "999px",
+                border: "1px solid #f1c9bd",
+                backgroundColor: "rgba(255, 250, 243, 0.78)",
+                color: "#b90f2f",
+                fontSize: "13px",
+                fontWeight: "bold",
+                letterSpacing: "0.08em",
+                marginBottom: "20px",
+              }}
+            >
+              <Sparkles size={15} />
+              FEATURED RECIPE
+            </span>
+
+            <h1
+              style={{
+                fontSize: "64px",
+                lineHeight: "1.05",
+                marginBottom: "18px",
+                fontFamily: "Georgia, serif",
+                color: "#8f0d25",
+                fontWeight: 500,
+              }}
+            >
+              Cherry Cream Cake
+            </h1>
+
+            <div
+              style={{
+                color: "#c2344e",
+                fontFamily: "Georgia, serif",
+                fontSize: "24px",
+                marginBottom: "18px",
+              }}
+            >
+              ✧ ───── ♡ ───── ✧
+            </div>
+
+            <p
+              style={{
+                maxWidth: "560px",
+                color: "#7c4a42",
+                lineHeight: "1.8",
+                fontSize: "17px",
+                marginBottom: "26px",
+              }}
+            >
+              Discover cozy recipes, save your favorites, and collect sweet
+              ideas for your next homemade meal.
+            </p>
+
+            <div
+              style={{
+                display: "flex",
+                gap: "14px",
+                flexWrap: "wrap",
+                marginBottom: "24px",
+              }}
+            >
+              <a href="/search" style={primaryButtonStyle}>
+                <ChefHat size={18} />
+                View Recipe
+              </a>
+
+              <a href="/watchlist" style={secondaryButtonStyle}>
+                <Heart size={18} />
+                Save Recipe
+              </a>
+            </div>
+
+            <div
+              style={{
+                width: "100%",
+                maxWidth: "620px",
+                display: "flex",
+                gap: "10px",
+                padding: "8px",
+                borderRadius: "22px",
+                backgroundColor: "rgba(255, 250, 243, 0.92)",
+                border: "1px solid #ead7c4",
+                boxShadow: "0 14px 28px rgba(95, 31, 35, 0.12)",
+              }}
+            >
+              <input
+                type="text"
+                placeholder="Search recipes, desserts, drinks..."
+                value={searchText}
+                onChange={(event) => setSearchText(event.target.value)}
+                style={{
+                  flex: 1,
+                  minWidth: "180px",
+                  border: "none",
+                  outline: "none",
+                  backgroundColor: "transparent",
+                  color: "#5f1f23",
+                  fontSize: "16px",
+                  padding: "12px 14px",
+                }}
+              />
+
+              <a href={searchHref} style={smallSearchButtonStyle}>
+                <Search size={18} />
+                Search
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section
+        style={{
+          position: "relative",
+          zIndex: 1,
+          padding: "0 60px 22px",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            gap: "14px",
+            flexWrap: "wrap",
+            justifyContent: "center",
+          }}
+        >
+          {categories.map((category) => (
+            <a
+              key={category}
+              href={`/search?query=${encodeURIComponent(category)}`}
+              style={categoryStyle}
+            >
+              {category}
+            </a>
+          ))}
+        </div>
+      </section>
+
+      <section
+        style={{
+          position: "relative",
+          zIndex: 1,
+          padding: "8px 60px 34px",
+        }}
+      >
+        <SectionTitle title="Featured Recipes" />
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+            gap: "24px",
+          }}
+        >
+          {featuredRecipes.map((recipe) => (
+            <RecipeCard key={recipe.id} recipe={recipe} />
+          ))}
+        </div>
+      </section>
+
+      <section
+        style={{
+          position: "relative",
+          zIndex: 1,
+          padding: "0 60px 60px",
+        }}
+      >
+        <SectionTitle title="Trending Recipes" />
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+            gap: "24px",
+          }}
+        >
+          {[...featuredRecipes].reverse().map((recipe) => (
+            <RecipeCard key={`trending-${recipe.id}`} recipe={recipe} />
+          ))}
+        </div>
+      </section>
+
+      <footer
+        style={{
+          padding: "24px 60px",
+          borderTop: "1px solid #ead7c4",
+          textAlign: "center",
+          color: "#9a6b5f",
+          backgroundColor: "rgba(255, 250, 243, 0.8)",
+        }}
+      >
+        <p>❦ 2026 RecipePeeker. Find your next cozy recipe. ❦</p>
+      </footer>
+    </main>
+  );
+}
+
+function SectionTitle({ title }: { title: string }) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        gap: "16px",
+        marginBottom: "18px",
+      }}
+    >
+      <h2
+        style={{
+          fontSize: "28px",
+          fontFamily: "Georgia, serif",
+          color: "#8f0d25",
+          fontWeight: 500,
+        }}
+      >
+        ❧ {title}
+      </h2>
+
+      <a
+        href="/search"
+        style={{
+          color: "#b90f2f",
+          textDecoration: "none",
+          fontWeight: "bold",
+        }}
+      >
+        View all →
+      </a>
+    </div>
+  );
+}
+
+function RecipeCard({
+  recipe,
+}: {
+  recipe: {
+    id: number;
+    title: string;
+    category: string;
+    time: string;
+    difficulty: string;
+    thumbnail: string;
+  };
+}) {
+  return (
+    <a
+      href={`/trailer/${recipe.id}`}
+      style={{
+        backgroundColor: "#fffaf3",
+        borderRadius: "20px",
+        overflow: "hidden",
+        border: "1px solid #ead7c4",
+        boxShadow: "0 14px 30px rgba(95, 31, 35, 0.11)",
+        textDecoration: "none",
+        color: "#5f1f23",
+        display: "block",
+        cursor: "pointer",
+        position: "relative",
+      }}
+    >
+      <div
+        style={{
+          position: "absolute",
+          top: "8px",
+          right: "10px",
+          zIndex: 2,
+          color: "white",
+          fontSize: "34px",
+          textShadow: "0 2px 10px rgba(0,0,0,0.18)",
+          pointerEvents: "none",
+        }}
+      >
+        ❦
+      </div>
+
+      <div style={{ position: "relative" }}>
+        <img
+          src={recipe.thumbnail}
+          alt={recipe.title}
+          style={{
+            width: "100%",
+            height: "170px",
+            objectFit: "cover",
+            display: "block",
+          }}
+        />
+
+        <span
+          style={{
+            position: "absolute",
+            left: "14px",
+            bottom: "12px",
+            width: "38px",
+            height: "38px",
+            borderRadius: "50%",
+            backgroundColor: "rgba(255, 250, 243, 0.94)",
+            color: "#b90f2f",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            boxShadow: "0 8px 18px rgba(95, 31, 35, 0.18)",
+          }}
+        >
+          <ChefHat size={18} />
+        </span>
+      </div>
+
+      <div
+        style={{
+          padding: "16px 18px 18px",
+          textAlign: "center",
+        }}
+      >
+        <h3
+          style={{
+            fontSize: "18px",
+            marginBottom: "8px",
+            color: "#8f0d25",
+            fontFamily: "Georgia, serif",
+            lineHeight: "1.35",
+          }}
+        >
+          {recipe.title}
+        </h3>
 
         <p
           style={{
-            fontSize: "18px",
-            marginBottom: "32px",
-            color: "#cbd5e1",
+            color: "#9a6b5f",
+            fontSize: "14px",
+            marginBottom: "10px",
           }}
         >
-          ค้นหาและดูตัวอย่างหนัง/ซีรีส์จาก YouTube ได้ในที่เดียว
+          {recipe.category}
         </p>
 
         <div
           style={{
             display: "flex",
             justifyContent: "center",
-            gap: "12px",
-            marginTop: "20px",
+            gap: "10px",
             flexWrap: "wrap",
+            color: "#7c4a42",
+            fontSize: "13px",
           }}
         >
-          <input
-            type="text"
-            placeholder="Search movie or series trailer..."
-            value={searchText}
-            onChange={(event) => setSearchText(event.target.value)}
+          <span
             style={{
-              width: "420px",
-              maxWidth: "100%",
-              padding: "14px 18px",
-              fontSize: "16px",
-              border: "1px solid #334155",
-              borderRadius: "14px",
-              backgroundColor: "#111827",
-              color: "white",
-              outline: "none",
-              boxShadow: "0 0 15px rgba(255, 255, 255, 0.35)",
-            }}
-          />
-
-          <a
-            href={`/search?query=${encodeURIComponent(searchText)}`}
-            style={{
-              padding: "14px 24px",
-              fontSize: "16px",
-              borderRadius: "14px",
-              backgroundColor: "#e11d48",
-              color: "white",
-              cursor: "pointer",
-              textDecoration: "none",
-              fontWeight: "bold",
-              display: "flex",
+              display: "inline-flex",
               alignItems: "center",
-              gap: "8px",
+              gap: "5px",
             }}
           >
-            <Search size={18} />
-            Search
-          </a>
+            <Clock size={14} />
+            {recipe.time}
+          </span>
+
+          <span>• {recipe.difficulty}</span>
         </div>
-      </section>
-
-      <div
-        style={{
-          borderRadius: "64px 64px 0 0",
-          backgroundColor: "#111827",
-          borderTop: "1px solid #334155",
-          paddingTop: "20px",
-        }}
-      >
-        <section
-          style={{
-            margin: "0 60px",
-            padding: "32px 0",
-          }}
-        >
-          <h2
-            style={{
-              fontSize: "24px",
-              fontWeight: "bold",
-              marginBottom: "16px",
-            }}
-          >
-            Categories
-          </h2>
-
-          <div
-            style={{
-              display: "flex",
-              gap: "12px",
-              flexWrap: "wrap",
-            }}
-          >
-            {categories.map((category) => (
-              <a
-                key={category}
-                href={`/search?query=${encodeURIComponent(category)}`}
-                style={{
-                  padding: "10px 18px",
-                  borderRadius: "999px",
-                  border: "1px solid #475569",
-                  backgroundColor: "#0f172a",
-                  color: "white",
-                  cursor: "pointer",
-                  fontWeight: "600",
-                  textDecoration: "none",
-                }}
-              >
-                {category}
-              </a>
-            ))}
-          </div>
-        </section>
-
-        <section
-          style={{
-            padding: "20px 60px 60px",
-          }}
-        >
-          <h2
-            style={{
-              fontSize: "28px",
-              fontWeight: "bold",
-              marginBottom: "24px",
-            }}
-          >
-            Featured Trailers
-          </h2>
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-              gap: "24px",
-            }}
-          >
-            {featuredTrailers.map((trailer) => (
-              <a
-                key={trailer.id}
-                href={`/trailer/${trailer.id}`}
-                style={{
-                  backgroundColor: "#0f172a",
-                  borderRadius: "22px",
-                  overflow: "hidden",
-                  border: "1px solid #334155",
-                  boxShadow: "0 0 15px rgba(255, 255, 255, 0.18)",
-                  textDecoration: "none",
-                  color: "white",
-                  display: "block",
-                  cursor: "pointer",
-                }}
-              >
-                <img
-                  src={trailer.thumbnail}
-                  alt={trailer.title}
-                  style={{
-                    width: "100%",
-                    height: "180px",
-                    objectFit: "cover",
-                  }}
-                />
-
-                <div
-                  style={{
-                    padding: "18px",
-                  }}
-                >
-                  <p
-                    style={{
-                      color: "#94a3b8",
-                      fontSize: "14px",
-                      marginBottom: "8px",
-                    }}
-                  >
-                    {trailer.category}
-                  </p>
-
-                  <h3
-                    style={{
-                      fontSize: "20px",
-                      marginBottom: "18px",
-                      lineHeight: "1.4",
-                    }}
-                  >
-                    {trailer.title}
-                  </h3>
-
-                  <span
-                    style={{
-                      padding: "10px 16px",
-                      borderRadius: "999px",
-                      border: "1px solid #475569",
-                      fontSize: "16px",
-                      color: "white",
-                      display: "inline-flex",
-                      justifyContent: "center",
-                      alignItems: "center",
-                      gap: "8px",
-                      fontWeight: "bold",
-                    }}
-                  >
-                    <Play size={16} />
-                    View Trailer →
-                  </span>
-                </div>
-              </a>
-            ))}
-          </div>
-        </section>
       </div>
-
-      <footer
-        style={{
-          padding: "24px 60px",
-          borderTop: "1px solid #1e293b",
-          textAlign: "center",
-          color: "#94a3b8",
-          backgroundColor: "#0f172a",
-        }}
-      >
-        <p>❀ 2026 CinePeeker. Peek the trailer before you watch. ❀</p>
-      </footer>
-    </main>
+    </a>
   );
 }
+
+const primaryButtonStyle: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: "10px",
+  padding: "14px 24px",
+  borderRadius: "999px",
+  border: "none",
+  backgroundColor: "#b90f2f",
+  color: "white",
+  cursor: "pointer",
+  textDecoration: "none",
+  fontWeight: "bold",
+  boxShadow: "0 12px 26px rgba(185, 15, 47, 0.25)",
+};
+
+const secondaryButtonStyle: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: "10px",
+  padding: "14px 24px",
+  borderRadius: "999px",
+  border: "1px solid #d8b9a6",
+  backgroundColor: "rgba(255, 250, 243, 0.82)",
+  color: "#7a2d32",
+  cursor: "pointer",
+  textDecoration: "none",
+  fontWeight: "bold",
+};
+
+const smallSearchButtonStyle: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: "8px",
+  padding: "12px 20px",
+  borderRadius: "16px",
+  backgroundColor: "#b90f2f",
+  color: "white",
+  textDecoration: "none",
+  fontWeight: "bold",
+};
+
+const categoryStyle: React.CSSProperties = {
+  padding: "12px 22px",
+  borderRadius: "999px",
+  border: "1px solid #ead7c4",
+  backgroundColor: "rgba(255, 250, 243, 0.88)",
+  color: "#8f0d25",
+  cursor: "pointer",
+  fontWeight: "600",
+  textDecoration: "none",
+  boxShadow: "0 10px 22px rgba(95, 31, 35, 0.08)",
+};

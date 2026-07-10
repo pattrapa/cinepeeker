@@ -5,10 +5,10 @@ import { useRouter } from "next/navigation";
 import {
   Home as HomeIcon,
   Search,
-  Bookmark,
+  Heart,
   User,
   LogOut,
-  Film,
+  CookingPot,
 } from "lucide-react";
 
 export default function Navbar() {
@@ -40,9 +40,11 @@ export default function Navbar() {
           justifyContent: "space-between",
           alignItems: "center",
           gap: "16px",
-          padding: "18px 48px",
-          backgroundColor: "#0f172a",
-          borderBottom: "1px solid #233047",
+          padding: "20px 64px",
+          background:
+            "linear-gradient(180deg, rgba(255, 250, 243, 0.98), rgba(255, 247, 237, 0.94))",
+          borderBottom: "1px solid #ead7c4",
+          boxShadow: "0 8px 30px rgba(185, 15, 47, 0.08)",
           flexWrap: "wrap",
         }}
       >
@@ -51,34 +53,44 @@ export default function Navbar() {
           style={{
             display: "flex",
             alignItems: "center",
-            gap: "10px",
-            color: "white",
+            gap: "12px",
+            color: "#5f1f23",
             textDecoration: "none",
-            fontSize: "24px",
+            fontSize: "30px",
             fontWeight: "bold",
+            fontFamily: "Georgia, serif",
           }}
         >
           <span
-            
+            style={{
+              width: "48px",
+              height: "48px",
+              borderRadius: "50%",
+              background: "linear-gradient(135deg, #b90f2f, #d92045)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "white",
+              boxShadow: "0 10px 24px rgba(185, 15, 47, 0.25)",
+            }}
           >
-            <Film size={24} />
+            <CookingPot size={25} />
           </span>
-          CinePeeker
+
+          <span>
+            Recipe<span style={{ color: "#b90f2f" }}>Peeker</span>
+          </span>
         </a>
 
         <div
           style={{
             display: "flex",
             alignItems: "center",
-            gap: "8px",
-            padding: "8px",
-            borderRadius: "999px",
-            backgroundColor: "#182235",
-            border: "1px solid #334155",
+            gap: "14px",
             flexWrap: "wrap",
           }}
         >
-          <a href="/" style={navLinkStyle}>
+          <a href="/" style={{ ...navLinkStyle, ...activeNavStyle }}>
             <HomeIcon size={18} />
             Home
           </a>
@@ -89,8 +101,8 @@ export default function Navbar() {
           </a>
 
           <a href="/watchlist" style={navLinkStyle}>
-            <Bookmark size={18} />
-            Watchlist
+            <Heart size={18} />
+            Saved Recipes
           </a>
 
           {isLoggedIn ? (
@@ -99,9 +111,9 @@ export default function Navbar() {
               onClick={() => setShowLogoutPopup(true)}
               style={{
                 ...navLinkStyle,
-                backgroundColor: "#e11d48",
-                fontWeight: "700",
-                border: "none",
+                border: "1px solid #b90f2f",
+                backgroundColor: "transparent",
+                color: "#b90f2f",
                 cursor: "pointer",
                 fontSize: "16px",
               }}
@@ -114,8 +126,8 @@ export default function Navbar() {
               href="/login"
               style={{
                 ...navLinkStyle,
-                backgroundColor: "#e11d48",
-                fontWeight: "700",
+                border: "1px solid #b90f2f",
+                color: "#b90f2f",
               }}
             >
               <User size={18} />
@@ -131,7 +143,7 @@ export default function Navbar() {
             position: "fixed",
             inset: 0,
             zIndex: 3000,
-            backgroundColor: "rgba(0, 0, 0, 0.65)",
+            backgroundColor: "rgba(95, 31, 35, 0.45)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -142,18 +154,34 @@ export default function Navbar() {
             style={{
               width: "100%",
               maxWidth: "420px",
-              backgroundColor: "#1e293b",
-              border: "1px solid #334155",
-              borderRadius: "24px",
-              padding: "28px",
-              color: "white",
-              boxShadow: "0 25px 70px rgba(0, 0, 0, 0.45)",
+              backgroundColor: "#fffaf3",
+              border: "1px solid #ead7c4",
+              borderRadius: "28px",
+              padding: "30px",
+              color: "#5f1f23",
+              boxShadow: "0 25px 70px rgba(95, 31, 35, 0.25)",
+              position: "relative",
+              overflow: "hidden",
             }}
           >
+            <div
+              style={{
+                position: "absolute",
+                top: "-18px",
+                right: "-10px",
+                fontSize: "74px",
+                color: "rgba(185, 15, 47, 0.08)",
+                fontFamily: "Georgia, serif",
+              }}
+            >
+              ❦
+            </div>
+
             <h2
               style={{
-                fontSize: "24px",
+                fontSize: "26px",
                 marginBottom: "12px",
+                fontFamily: "Georgia, serif",
               }}
             >
               Confirm Logout
@@ -161,12 +189,12 @@ export default function Navbar() {
 
             <p
               style={{
-                color: "#cbd5e1",
+                color: "#8a5c52",
                 marginBottom: "24px",
                 lineHeight: "1.6",
               }}
             >
-              Are you sure you want to logout from CinePeeker?
+              Are you sure you want to logout from RecipePeeker?
             </p>
 
             <div
@@ -180,15 +208,7 @@ export default function Navbar() {
               <button
                 type="button"
                 onClick={() => setShowLogoutPopup(false)}
-                style={{
-                  padding: "12px 18px",
-                  borderRadius: "999px",
-                  border: "1px solid #475569",
-                  backgroundColor: "transparent",
-                  color: "white",
-                  cursor: "pointer",
-                  fontWeight: "bold",
-                }}
+                style={secondaryButtonStyle}
               >
                 Cancel
               </button>
@@ -196,15 +216,7 @@ export default function Navbar() {
               <button
                 type="button"
                 onClick={handleConfirmLogout}
-                style={{
-                  padding: "12px 18px",
-                  borderRadius: "999px",
-                  border: "none",
-                  backgroundColor: "#e11d48",
-                  color: "white",
-                  cursor: "pointer",
-                  fontWeight: "bold",
-                }}
+                style={primaryButtonStyle}
               >
                 Yes, Logout
               </button>
@@ -220,9 +232,35 @@ const navLinkStyle: React.CSSProperties = {
   display: "flex",
   alignItems: "center",
   gap: "8px",
-  padding: "10px 16px",
-  borderRadius: "999px",
-  color: "white",
+  padding: "12px 20px",
+  borderRadius: "18px",
+  color: "#5f1f23",
   textDecoration: "none",
   fontWeight: "600",
+};
+
+const activeNavStyle: React.CSSProperties = {
+  backgroundColor: "#fffaf3",
+  color: "#b90f2f",
+  boxShadow: "0 8px 24px rgba(185, 15, 47, 0.12)",
+};
+
+const primaryButtonStyle: React.CSSProperties = {
+  padding: "12px 18px",
+  borderRadius: "999px",
+  border: "none",
+  backgroundColor: "#b90f2f",
+  color: "white",
+  cursor: "pointer",
+  fontWeight: "bold",
+};
+
+const secondaryButtonStyle: React.CSSProperties = {
+  padding: "12px 18px",
+  borderRadius: "999px",
+  border: "1px solid #d8b9a6",
+  backgroundColor: "transparent",
+  color: "#5f1f23",
+  cursor: "pointer",
+  fontWeight: "bold",
 };

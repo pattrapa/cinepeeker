@@ -3,21 +3,34 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "@/app/components/Navbar";
+import { ChefHat, Heart, Trash2 } from "lucide-react";
 
-type WatchlistStatus = "Want to Watch" | "Watched" | "Favorite";
+type RecipeStatus = "Want to Watch" | "Watched" | "Favorite";
 
-type WatchlistItem = {
+type SavedRecipeItem = {
   id: number;
   title: string;
   channel: string;
   thumbnail: string;
-  status: WatchlistStatus;
+  status: RecipeStatus;
+};
+
+const statusOptions: RecipeStatus[] = [
+  "Want to Watch",
+  "Watched",
+  "Favorite",
+];
+
+const statusLabels: Record<RecipeStatus, string> = {
+  "Want to Watch": "Want to Cook",
+  Watched: "Cooked",
+  Favorite: "Favorite",
 };
 
 export default function WatchlistPage() {
   const router = useRouter();
 
-  const [watchlistItems, setWatchlistItems] = useState<WatchlistItem[]>([]);
+  const [savedRecipes, setSavedRecipes] = useState<SavedRecipeItem[]>([]);
   const [toast, setToast] = useState("");
   const [isCheckingLogin, setIsCheckingLogin] = useState(true);
 
@@ -26,7 +39,7 @@ export default function WatchlistPage() {
 
     setTimeout(() => {
       setToast("");
-    }, 2500);
+    }, 2400);
   };
 
   useEffect(() => {
@@ -37,32 +50,39 @@ export default function WatchlistPage() {
       return;
     }
 
-    const savedWatchlist = localStorage.getItem("watchlist");
-    const parsedWatchlist = savedWatchlist ? JSON.parse(savedWatchlist) : [];
+    const savedData = localStorage.getItem("watchlist");
+    const parsedRecipes = savedData ? JSON.parse(savedData) : [];
 
-    setWatchlistItems(parsedWatchlist);
+    setSavedRecipes(parsedRecipes);
     setIsCheckingLogin(false);
   }, [router]);
 
-  const saveWatchlist = (updatedWatchlist: WatchlistItem[]) => {
-    setWatchlistItems(updatedWatchlist);
-    localStorage.setItem("watchlist", JSON.stringify(updatedWatchlist));
+  const saveToLocalStorage = (updatedRecipes: SavedRecipeItem[]) => {
+    localStorage.setItem("watchlist", JSON.stringify(updatedRecipes));
+    setSavedRecipes(updatedRecipes);
   };
 
-  const handleStatusChange = (id: number, newStatus: WatchlistStatus) => {
-    const updatedWatchlist = watchlistItems.map((item) =>
-      item.id === id ? { ...item, status: newStatus } : item
+  const handleStatusChange = (recipeId: number, newStatus: RecipeStatus) => {
+    const updatedRecipes = savedRecipes.map((recipe) =>
+      recipe.id === recipeId
+        ? {
+            ...recipe,
+            status: newStatus,
+          }
+        : recipe
     );
 
-    saveWatchlist(updatedWatchlist);
-    showToast(`Status updated to ${newStatus}.`);
+    saveToLocalStorage(updatedRecipes);
+    showToast("Recipe status updated ✨");
   };
 
-  const handleRemove = (id: number) => {
-    const updatedWatchlist = watchlistItems.filter((item) => item.id !== id);
+  const handleRemoveRecipe = (recipeId: number) => {
+    const updatedRecipes = savedRecipes.filter(
+      (recipe) => recipe.id !== recipeId
+    );
 
-    saveWatchlist(updatedWatchlist);
-    showToast("Removed from Watchlist.");
+    saveToLocalStorage(updatedRecipes);
+    showToast("Recipe removed from Saved Recipes.");
   };
 
   if (isCheckingLogin) {
@@ -70,18 +90,26 @@ export default function WatchlistPage() {
       <main
         style={{
           minHeight: "100vh",
-          backgroundColor: "#0f172a",
-          color: "white",
+          background:
+            "linear-gradient(180deg, #fff7ed 0%, #fffaf3 45%, #f9eadf 100%)",
+          color: "#5f1f23",
         }}
       >
         <Navbar />
 
         <section
           style={{
-            padding: "50px 60px",
+            padding: "48px 60px",
           }}
         >
-          <p style={{ color: "#cbd5e1" }}>Checking login status...</p>
+          <p
+            style={{
+              color: "#8a5c52",
+              fontSize: "18px",
+            }}
+          >
+            Checking login status...
+          </p>
         </section>
       </main>
     );
@@ -91,8 +119,9 @@ export default function WatchlistPage() {
     <main
       style={{
         minHeight: "100vh",
-        backgroundColor: "#0f172a",
-        color: "white",
+        background:
+          "radial-gradient(circle at top left, rgba(255,255,255,0.95), transparent 28%), linear-gradient(180deg, #fff7ed 0%, #fffaf3 48%, #f9eadf 100%)",
+        color: "#5f1f23",
       }}
     >
       <Navbar />
@@ -101,18 +130,16 @@ export default function WatchlistPage() {
         <div
           style={{
             position: "fixed",
-            top: "90px",
+            top: "96px",
             right: "32px",
             zIndex: 2000,
-            backgroundColor: "#1e293b",
-            color: "white",
-            border: "1px solid #334155",
-            borderLeft: toast.includes("Removed")
-              ? "5px solid #e11d48"
-              : "5px solid #22c55e",
-            borderRadius: "16px",
+            backgroundColor: "#fffaf3",
+            color: "#5f1f23",
+            border: "1px solid #ead7c4",
+            borderLeft: "5px solid #b90f2f",
+            borderRadius: "18px",
             padding: "16px 20px",
-            boxShadow: "0 20px 50px rgba(0, 0, 0, 0.35)",
+            boxShadow: "0 20px 50px rgba(95, 31, 35, 0.18)",
             fontWeight: "600",
             maxWidth: "340px",
           }}
@@ -123,259 +150,338 @@ export default function WatchlistPage() {
 
       <section
         style={{
-          padding: "50px 60px",
+          padding: "48px 60px 70px",
+          position: "relative",
+          overflow: "hidden",
         }}
       >
         <div
           style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-end",
-            gap: "20px",
-            flexWrap: "wrap",
-            marginBottom: "32px",
+            position: "absolute",
+            top: "20px",
+            right: "40px",
+            fontSize: "110px",
+            color: "rgba(255, 255, 255, 0.9)",
+            pointerEvents: "none",
           }}
         >
-          <div>
-            <h1
-              style={{
-                fontSize: "36px",
-                fontWeight: "bold",
-                marginBottom: "12px",
-              }}
-            >
-              My Watchlist
-            </h1>
-
-            <p
-              style={{
-                color: "#cbd5e1",
-                lineHeight: "1.6",
-              }}
-            >
-              รายการ trailer ที่คุณบันทึกไว้จะแสดงในหน้านี้
-            </p>
-          </div>
-
-          <a
-            href="/search"
-            style={{
-              padding: "12px 18px",
-              borderRadius: "999px",
-              backgroundColor: "#e11d48",
-              color: "white",
-              textDecoration: "none",
-              fontWeight: "bold",
-            }}
-          >
-            Browse Trailers
-          </a>
+          ❦
         </div>
 
-        {watchlistItems.length === 0 ? (
-          <div
+        <div
+          style={{
+            position: "relative",
+            zIndex: 1,
+          }}
+        >
+          <p
             style={{
-              maxWidth: "760px",
-              backgroundColor: "#1e293b",
-              border: "1px solid #334155",
-              borderRadius: "20px",
-              padding: "28px",
-              color: "#cbd5e1",
+              color: "#b90f2f",
+              fontWeight: "bold",
+              letterSpacing: "0.08em",
+              fontSize: "13px",
+              marginBottom: "12px",
             }}
           >
-            <h2
-              style={{
-                color: "white",
-                fontSize: "24px",
-                marginBottom: "10px",
-              }}
-            >
-              No trailers saved yet.
-            </h2>
+            ❧ SAVED COLLECTION
+          </p>
 
-            <p
-              style={{
-                lineHeight: "1.6",
-                marginBottom: "20px",
-              }}
-            >
-              เริ่มค้นหา trailer ที่สนใจ แล้วกด Add to Watchlist จากหน้า Trailer Detail
-              เพื่อเก็บไว้ดูภายหลัง
-            </p>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: "18px",
+              flexWrap: "wrap",
+              marginBottom: "28px",
+            }}
+          >
+            <div>
+              <h1
+                style={{
+                  fontSize: "44px",
+                  fontFamily: "Georgia, serif",
+                  color: "#8f0d25",
+                  marginBottom: "10px",
+                  fontWeight: 500,
+                }}
+              >
+                Saved Recipes
+              </h1>
+
+              <p
+                style={{
+                  color: "#8a5c52",
+                  lineHeight: "1.7",
+                  maxWidth: "700px",
+                }}
+              >
+                เก็บเมนูที่อยากลองทำ เปลี่ยนสถานะ และกลับมาดูสูตรได้ทุกเวลา
+              </p>
+            </div>
 
             <a
               href="/search"
               style={{
-                display: "inline-block",
-                padding: "12px 18px",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
+                padding: "14px 22px",
                 borderRadius: "999px",
-                backgroundColor: "#e11d48",
+                backgroundColor: "#b90f2f",
                 color: "white",
                 textDecoration: "none",
                 fontWeight: "bold",
+                boxShadow: "0 12px 26px rgba(185, 15, 47, 0.22)",
               }}
             >
-              Go to Search
+              <ChefHat size={18} />
+              Browse Recipes
             </a>
           </div>
-        ) : (
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: "20px",
-            }}
-          >
-            {watchlistItems.map((item) => (
+
+          {savedRecipes.length === 0 ? (
+            <div
+              style={{
+                padding: "36px",
+                borderRadius: "28px",
+                backgroundColor: "#fffaf3",
+                border: "1px solid #ead7c4",
+                boxShadow: "0 18px 42px rgba(95, 31, 35, 0.1)",
+                maxWidth: "760px",
+                position: "relative",
+                overflow: "hidden",
+              }}
+            >
               <div
-                key={item.id}
                 style={{
-                  display: "flex",
-                  gap: "20px",
-                  padding: "16px",
-                  borderRadius: "18px",
-                  backgroundColor: "#1e293b",
-                  border: "1px solid #334155",
-                  maxWidth: "980px",
-                  boxShadow: "0 0 15px rgba(255, 255, 255, 0.08)",
-                  flexWrap: "wrap",
+                  position: "absolute",
+                  top: "-18px",
+                  right: "0",
+                  fontSize: "86px",
+                  color: "rgba(185, 15, 47, 0.08)",
                 }}
               >
-                <a href={`/trailer/${item.id}`}>
-                  <img
-                    src={item.thumbnail}
-                    alt={item.title}
-                    style={{
-                      width: "220px",
-                      maxWidth: "100%",
-                      height: "130px",
-                      objectFit: "cover",
-                      borderRadius: "12px",
-                    }}
-                  />
-                </a>
+                ❦
+              </div>
 
+              <Heart
+                size={42}
+                style={{
+                  color: "#b90f2f",
+                  marginBottom: "14px",
+                }}
+              />
+
+              <h2
+                style={{
+                  fontSize: "28px",
+                  fontFamily: "Georgia, serif",
+                  color: "#8f0d25",
+                  marginBottom: "10px",
+                  fontWeight: 500,
+                }}
+              >
+                No saved recipes yet
+              </h2>
+
+              <p
+                style={{
+                  color: "#8a5c52",
+                  lineHeight: "1.7",
+                  marginBottom: "22px",
+                }}
+              >
+                ยังไม่มีสูตรอาหารที่บันทึกไว้ ลองไปค้นหาเมนูน่าทำแล้วกด Save Recipe ได้เลย
+              </p>
+
+              <a
+                href="/search"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  padding: "13px 20px",
+                  borderRadius: "999px",
+                  backgroundColor: "#b90f2f",
+                  color: "white",
+                  textDecoration: "none",
+                  fontWeight: "bold",
+                }}
+              >
+                <ChefHat size={18} />
+                Go to Search
+              </a>
+            </div>
+          ) : (
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
+                gap: "24px",
+              }}
+            >
+              {savedRecipes.map((recipe) => (
                 <div
+                  key={recipe.id}
                   style={{
-                    flex: 1,
-                    minWidth: "240px",
+                    backgroundColor: "#fffaf3",
+                    borderRadius: "24px",
+                    overflow: "hidden",
+                    border: "1px solid #ead7c4",
+                    boxShadow: "0 16px 34px rgba(95, 31, 35, 0.11)",
+                    position: "relative",
                   }}
                 >
-                  <h2
+                  <div
                     style={{
-                      fontSize: "22px",
-                      marginBottom: "8px",
+                      position: "absolute",
+                      top: "8px",
+                      right: "10px",
+                      zIndex: 2,
+                      color: "white",
+                      fontSize: "34px",
+                      textShadow: "0 2px 10px rgba(0,0,0,0.2)",
+                      pointerEvents: "none",
                     }}
                   >
-                    {item.title}
-                  </h2>
+                    ❦
+                  </div>
 
-                  <p
+                  <img
+                    src={recipe.thumbnail}
+                    alt={recipe.title}
                     style={{
-                      color: "#94a3b8",
-                      marginBottom: "8px",
+                      width: "100%",
+                      height: "170px",
+                      objectFit: "cover",
+                      display: "block",
                     }}
-                  >
-                    Channel: {item.channel}
-                  </p>
+                  />
 
                   <div
                     style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "12px",
-                      flexWrap: "wrap",
-                      marginBottom: "16px",
+                      padding: "18px",
                     }}
                   >
-                    <span
+                    <p
                       style={{
-                        color: "#cbd5e1",
-                        fontWeight: "600",
+                        color: "#b90f2f",
+                        fontSize: "14px",
+                        marginBottom: "8px",
+                        fontWeight: "bold",
                       }}
                     >
-                      Status:
-                    </span>
+                      {recipe.channel}
+                    </p>
+
+                    <h3
+                      style={{
+                        color: "#8f0d25",
+                        fontSize: "21px",
+                        lineHeight: "1.35",
+                        fontFamily: "Georgia, serif",
+                        fontWeight: 500,
+                        marginBottom: "16px",
+                      }}
+                    >
+                      {recipe.title}
+                    </h3>
+
+                    <label
+                      style={{
+                        display: "block",
+                        color: "#8a5c52",
+                        fontWeight: "bold",
+                        marginBottom: "8px",
+                        fontSize: "14px",
+                      }}
+                    >
+                      Recipe Status
+                    </label>
 
                     <select
-                      value={item.status}
+                      value={recipe.status}
                       onChange={(event) =>
                         handleStatusChange(
-                          item.id,
-                          event.target.value as WatchlistStatus
+                          recipe.id,
+                          event.target.value as RecipeStatus
                         )
                       }
                       style={{
-                        padding: "10px 14px",
-                        borderRadius: "999px",
-                        border: "1px solid #475569",
-                        backgroundColor: "#0f172a",
-                        color: "white",
+                        width: "100%",
+                        padding: "12px 14px",
+                        borderRadius: "16px",
+                        border: "1px solid #ead7c4",
+                        backgroundColor: "#fff7ed",
+                        color: "#5f1f23",
                         outline: "none",
-                        cursor: "pointer",
+                        fontWeight: "600",
+                        marginBottom: "16px",
                       }}
                     >
-                      <option value="Want to Watch">Want to Watch</option>
-                      <option value="Watched">Watched</option>
-                      <option value="Favorite">Favorite</option>
+                      {statusOptions.map((status) => (
+                        <option key={status} value={status}>
+                          {statusLabels[status]}
+                        </option>
+                      ))}
                     </select>
-                  </div>
 
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: "12px",
-                      flexWrap: "wrap",
-                    }}
-                  >
-                    <a
-                      href={`/trailer/${item.id}`}
+                    <div
                       style={{
-                        padding: "10px 16px",
-                        borderRadius: "999px",
-                        border: "1px solid white",
-                        backgroundColor: "transparent",
-                        color: "white",
-                        textDecoration: "none",
-                        fontWeight: "bold",
+                        display: "flex",
+                        gap: "10px",
+                        flexWrap: "wrap",
                       }}
                     >
-                      View Detail →
-                    </a>
+                      <a
+                        href={`/trailer/${recipe.id}`}
+                        style={{
+                          flex: 1,
+                          minWidth: "130px",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: "8px",
+                          padding: "12px 16px",
+                          borderRadius: "999px",
+                          backgroundColor: "#b90f2f",
+                          color: "white",
+                          textDecoration: "none",
+                          fontWeight: "bold",
+                        }}
+                      >
+                        <ChefHat size={17} />
+                        View Recipe
+                      </a>
 
-                    <button
-                      type="button"
-                      onClick={() => handleRemove(item.id)}
-                      style={{
-                        padding: "10px 16px",
-                        borderRadius: "999px",
-                        border: "none",
-                        backgroundColor: "#e11d48",
-                        color: "white",
-                        cursor: "pointer",
-                        fontWeight: "bold",
-                      }}
-                    >
-                      Remove
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveRecipe(recipe.id)}
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: "8px",
+                          padding: "12px 16px",
+                          borderRadius: "999px",
+                          border: "1px solid #d8b9a6",
+                          backgroundColor: "transparent",
+                          color: "#b90f2f",
+                          cursor: "pointer",
+                          fontWeight: "bold",
+                        }}
+                      >
+                        <Trash2 size={17} />
+                        Remove
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        <a
-          href="/"
-          style={{
-            display: "inline-block",
-            marginTop: "28px",
-            color: "white",
-            textDecoration: "none",
-          }}
-        >
-          ← Back to Home
-        </a>
+              ))}
+            </div>
+          )}
+        </div>
       </section>
     </main>
   );

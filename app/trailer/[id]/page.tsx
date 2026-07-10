@@ -3,24 +3,28 @@
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "@/app/components/Navbar";
+import { ChefHat, Clock, Heart, Trash2 } from "lucide-react";
 
-type Trailer = {
+type Recipe = {
   id: string;
   title: string;
   category: string;
-  channel: string;
-  publishedAt: string;
-  videoId: string;
+  time: string;
+  difficulty: string;
+  servings: string;
+  thumbnail: string;
   description: string;
+  ingredients: string[];
+  steps: string[];
 };
 
-type TrailerDetailProps = {
+type RecipeDetailProps = {
   params: Promise<{
     id: string;
   }>;
 };
 
-type WatchlistItem = {
+type SavedRecipeItem = {
   id: number;
   title: string;
   channel: string;
@@ -34,64 +38,147 @@ type Review = {
   comment: string;
 };
 
-const trailers: Trailer[] = [
+const recipes: Recipe[] = [
   {
     id: "1",
-    title: "Avatar Official Trailer",
-    category: "Sci-Fi",
-    channel: "20th Century Studios",
-    publishedAt: "2009",
-    videoId: "5PSNL1qE6VY",
-    description: "ตัวอย่างภาพยนตร์ Avatar แนว Sci-Fi ผจญภัยในโลกแพนดอร่า",
+    title: "Cherry Cream Cake",
+    category: "Dessert",
+    time: "45 mins",
+    difficulty: "Medium",
+    servings: "4 servings",
+    thumbnail:
+      "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=1200&q=80",
+    description:
+      "A soft cream cake with sweet cherry topping, perfect for a cozy afternoon dessert.",
+    ingredients: [
+      "2 cups cake flour",
+      "1 cup whipped cream",
+      "1/2 cup cherry jam",
+      "2 eggs",
+      "1/2 cup sugar",
+      "1 tsp vanilla extract",
+    ],
+    steps: [
+      "Prepare the cake batter with flour, eggs, sugar, and vanilla.",
+      "Bake until soft and golden.",
+      "Let the cake cool before adding whipped cream.",
+      "Spread cherry jam on top and decorate with cherries.",
+    ],
   },
   {
     id: "2",
-    title: "Wednesday Official Trailer",
-    category: "Fantasy",
-    channel: "Netflix",
-    publishedAt: "2022",
-    videoId: "Di310WS8zLk",
-    description: "ตัวอย่างซีรีส์ Wednesday แนวแฟนตาซี ลึกลับ และคอมเมดี้",
+    title: "Strawberry Pancakes",
+    category: "Breakfast",
+    time: "25 mins",
+    difficulty: "Easy",
+    servings: "2 servings",
+    thumbnail:
+      "https://images.unsplash.com/photo-1528207776546-365bb710ee93?auto=format&fit=crop&w=1200&q=80",
+    description:
+      "Fluffy pancakes topped with strawberries and cream for a sweet breakfast.",
+    ingredients: [
+      "1 cup pancake mix",
+      "1 egg",
+      "3/4 cup milk",
+      "Fresh strawberries",
+      "Whipped cream",
+      "Maple syrup",
+    ],
+    steps: [
+      "Mix pancake batter until smooth.",
+      "Cook pancakes on a warm pan until golden.",
+      "Top with strawberries and whipped cream.",
+      "Drizzle maple syrup before serving.",
+    ],
   },
   {
     id: "3",
-    title: "Inside Out 2 Official Trailer",
-    category: "Animation",
-    channel: "Pixar",
-    publishedAt: "2024",
-    videoId: "LEjhY15eCx0",
-    description: "ตัวอย่างภาพยนตร์แอนิเมชัน Inside Out 2 จาก Pixar",
+    title: "Creamy Tomato Pasta",
+    category: "Pasta",
+    time: "30 mins",
+    difficulty: "Easy",
+    servings: "2 servings",
+    thumbnail:
+      "https://images.unsplash.com/photo-1621996346565-e3dbc646d9a9?auto=format&fit=crop&w=1200&q=80",
+    description:
+      "Creamy tomato pasta with herbs, cheese, and a warm homemade flavor.",
+    ingredients: [
+      "200g pasta",
+      "1 cup tomato sauce",
+      "1/2 cup cooking cream",
+      "Garlic",
+      "Parmesan cheese",
+      "Basil leaves",
+    ],
+    steps: [
+      "Boil pasta until al dente.",
+      "Cook garlic with tomato sauce.",
+      "Add cream and stir until smooth.",
+      "Mix pasta with sauce and top with cheese.",
+    ],
   },
   {
     id: "4",
-    title: "The Batman Official Trailer",
-    category: "Action",
-    channel: "Warner Bros. Pictures",
-    publishedAt: "2022",
-    videoId: "mqqft2x_Aa4",
-    description: "ตัวอย่างภาพยนตร์ The Batman แนวแอคชั่น ดาร์ก และสืบสวน",
+    title: "Thai Basil Chicken",
+    category: "Thai Food",
+    time: "35 mins",
+    difficulty: "Medium",
+    servings: "2 servings",
+    thumbnail:
+      "https://images.unsplash.com/photo-1562565652-a0d8f0c59eb4?auto=format&fit=crop&w=1200&q=80",
+    description:
+      "A tasty Thai stir-fry recipe with basil, chicken, and a savory sauce.",
+    ingredients: [
+      "Chicken pieces",
+      "Thai basil leaves",
+      "Garlic",
+      "Chili",
+      "Soy sauce",
+      "Rice",
+    ],
+    steps: [
+      "Stir-fry garlic and chili until fragrant.",
+      "Add chicken and cook until done.",
+      "Season with soy sauce and stir well.",
+      "Add basil leaves and serve with rice.",
+    ],
   },
   {
     id: "5",
-    title: "Spider-Man: No Way Home Official Trailer",
-    category: "Superhero",
-    channel: "Sony Pictures Entertainment",
-    publishedAt: "2021",
-    videoId: "JfVOs4VSpmA",
-    description: "ตัวอย่างภาพยนตร์ Spider-Man: No Way Home แนวซูเปอร์ฮีโร่และผจญภัย",
+    title: "Cherry Lemon Soda",
+    category: "Drinks",
+    time: "10 mins",
+    difficulty: "Easy",
+    servings: "1 glass",
+    thumbnail:
+      "https://images.unsplash.com/photo-1544145945-f90425340c7e?auto=format&fit=crop&w=1200&q=80",
+    description:
+      "A refreshing cherry lemon soda with a sweet and sparkling taste.",
+    ingredients: [
+      "Cherry syrup",
+      "Lemon juice",
+      "Soda water",
+      "Ice cubes",
+      "Fresh cherry",
+      "Mint leaves",
+    ],
+    steps: [
+      "Add cherry syrup and lemon juice into a glass.",
+      "Fill the glass with ice cubes.",
+      "Pour soda water and stir gently.",
+      "Decorate with cherry and mint leaves.",
+    ],
   },
 ];
 
-export default function TrailerDetailPage({ params }: TrailerDetailProps) {
+export default function RecipeDetailPage({ params }: RecipeDetailProps) {
   const router = useRouter();
   const { id } = use(params);
 
-  const trailer = trailers.find((item) => item.id === id);
+  const recipe = recipes.find((item) => item.id === id);
 
   const [toast, setToast] = useState("");
   const [isSaved, setIsSaved] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-
   const [rating, setRating] = useState("");
   const [comment, setComment] = useState("");
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -104,13 +191,13 @@ export default function TrailerDetailPage({ params }: TrailerDetailProps) {
     }, 2500);
   };
 
-  const getWatchlist = (): WatchlistItem[] => {
-    const savedWatchlist = localStorage.getItem("watchlist");
-    return savedWatchlist ? JSON.parse(savedWatchlist) : [];
+  const getSavedRecipes = (): SavedRecipeItem[] => {
+    const savedRecipes = localStorage.getItem("watchlist");
+    return savedRecipes ? JSON.parse(savedRecipes) : [];
   };
 
-  const saveWatchlist = (updatedWatchlist: WatchlistItem[]) => {
-    localStorage.setItem("watchlist", JSON.stringify(updatedWatchlist));
+  const saveRecipes = (updatedRecipes: SavedRecipeItem[]) => {
+    localStorage.setItem("watchlist", JSON.stringify(updatedRecipes));
   };
 
   const getReviewKey = () => `reviews-${id}`;
@@ -120,24 +207,16 @@ export default function TrailerDetailPage({ params }: TrailerDetailProps) {
   };
 
   useEffect(() => {
-    const loginStatus = localStorage.getItem("isLoggedIn");
-    const loggedIn = loginStatus === "true";
+    if (!recipe) return;
 
-    setIsLoggedIn(loggedIn);
+    const savedRecipes = getSavedRecipes();
 
-    if (!loggedIn || !trailer) {
-      setIsSaved(false);
-      return;
-    }
-
-    const watchlist = getWatchlist();
-
-    const alreadySaved = watchlist.some(
-      (item) => item.id === Number(trailer.id)
+    const alreadySaved = savedRecipes.some(
+      (item) => item.id === Number(recipe.id)
     );
 
     setIsSaved(alreadySaved);
-  }, [trailer]);
+  }, [recipe]);
 
   useEffect(() => {
     const savedReviews = localStorage.getItem(getReviewKey());
@@ -146,13 +225,13 @@ export default function TrailerDetailPage({ params }: TrailerDetailProps) {
     setReviews(parsedReviews);
   }, [id]);
 
-  const handleAddToWatchlist = () => {
-    if (!trailer) return;
+  const handleSaveRecipe = () => {
+    if (!recipe) return;
 
     const loginStatus = localStorage.getItem("isLoggedIn");
 
     if (loginStatus !== "true") {
-      showToast("Please login before adding to Watchlist.");
+      showToast("Please login before saving this recipe.");
 
       setTimeout(() => {
         router.push(`/login?redirect=/trailer/${id}`);
@@ -161,45 +240,45 @@ export default function TrailerDetailPage({ params }: TrailerDetailProps) {
       return;
     }
 
-    const watchlist = getWatchlist();
+    const savedRecipes = getSavedRecipes();
 
-    const alreadyAdded = watchlist.some(
-      (item) => item.id === Number(trailer.id)
+    const alreadySaved = savedRecipes.some(
+      (item) => item.id === Number(recipe.id)
     );
 
-    if (alreadyAdded) {
+    if (alreadySaved) {
       setIsSaved(true);
-      showToast("This trailer is already saved.");
+      showToast("This recipe is already saved.");
       return;
     }
 
-    const newItem: WatchlistItem = {
-      id: Number(trailer.id),
-      title: trailer.title,
-      channel: trailer.channel,
-      thumbnail: `https://img.youtube.com/vi/${trailer.videoId}/hqdefault.jpg`,
+    const newItem: SavedRecipeItem = {
+      id: Number(recipe.id),
+      title: recipe.title,
+      channel: recipe.category,
+      thumbnail: recipe.thumbnail,
       status: "Want to Watch",
     };
 
-    const updatedWatchlist = [...watchlist, newItem];
+    const updatedRecipes = [...savedRecipes, newItem];
 
-    saveWatchlist(updatedWatchlist);
+    saveRecipes(updatedRecipes);
     setIsSaved(true);
 
-    showToast("Added to your Watchlist ✨");
+    showToast("Saved to your recipes ✨");
   };
 
-  const handleRemoveFromWatchlist = () => {
-    if (!trailer) return;
+  const handleRemoveRecipe = () => {
+    if (!recipe) return;
 
-    const updatedWatchlist = getWatchlist().filter(
-      (item) => item.id !== Number(trailer.id)
+    const updatedRecipes = getSavedRecipes().filter(
+      (item) => item.id !== Number(recipe.id)
     );
 
-    saveWatchlist(updatedWatchlist);
+    saveRecipes(updatedRecipes);
     setIsSaved(false);
 
-    showToast("Removed from Watchlist.");
+    showToast("Removed from saved recipes.");
   };
 
   const handleSubmitReview = (event: React.FormEvent<HTMLFormElement>) => {
@@ -255,31 +334,39 @@ export default function TrailerDetailPage({ params }: TrailerDetailProps) {
     showToast("Review deleted.");
   };
 
-  if (!trailer) {
+  if (!recipe) {
     return (
       <main
         style={{
           minHeight: "100vh",
-          backgroundColor: "#0f172a",
-          color: "white",
+          backgroundColor: "#fff7ed",
+          color: "#5f1f23",
         }}
       >
         <Navbar />
 
         <section
           style={{
-            padding: "40px",
+            padding: "48px 60px",
           }}
         >
-          <h1>Trailer not found</h1>
+          <h1
+            style={{
+              fontFamily: "Georgia, serif",
+              color: "#8f0d25",
+            }}
+          >
+            Recipe not found
+          </h1>
 
           <a
             href="/search"
             style={{
-              color: "white",
+              color: "#b90f2f",
               display: "inline-block",
               marginTop: "20px",
               textDecoration: "none",
+              fontWeight: "bold",
             }}
           >
             ← Back to Search
@@ -293,8 +380,9 @@ export default function TrailerDetailPage({ params }: TrailerDetailProps) {
     <main
       style={{
         minHeight: "100vh",
-        backgroundColor: "#0f172a",
-        color: "white",
+        background:
+          "radial-gradient(circle at top left, rgba(255,255,255,0.95), transparent 28%), linear-gradient(180deg, #fff7ed 0%, #fffaf3 48%, #f9eadf 100%)",
+        color: "#5f1f23",
       }}
     >
       <Navbar />
@@ -303,19 +391,19 @@ export default function TrailerDetailPage({ params }: TrailerDetailProps) {
         <div
           style={{
             position: "fixed",
-            top: "90px",
+            top: "96px",
             right: "32px",
             zIndex: 2000,
-            backgroundColor: "#1e293b",
-            color: "white",
-            border: "1px solid #334155",
+            backgroundColor: "#fffaf3",
+            color: "#5f1f23",
+            border: "1px solid #ead7c4",
             borderLeft:
-              toast.includes("Added") || toast.includes("successfully")
+              toast.includes("Saved") || toast.includes("successfully")
                 ? "5px solid #22c55e"
-                : "5px solid #e11d48",
-            borderRadius: "16px",
+                : "5px solid #b90f2f",
+            borderRadius: "18px",
             padding: "16px 20px",
-            boxShadow: "0 20px 50px rgba(0, 0, 0, 0.35)",
+            boxShadow: "0 20px 50px rgba(95, 31, 35, 0.18)",
             fontWeight: "600",
             maxWidth: "340px",
           }}
@@ -326,287 +414,443 @@ export default function TrailerDetailPage({ params }: TrailerDetailProps) {
 
       <section
         style={{
-          padding: "40px",
+          padding: "44px 60px 70px",
+          position: "relative",
+          overflow: "hidden",
         }}
       >
-        <h1
-          style={{
-            fontSize: "36px",
-            marginBottom: "12px",
-          }}
-        >
-          {trailer.title}
-        </h1>
-
-        <p
-          style={{
-            color: "#cbd5e1",
-            marginBottom: "8px",
-          }}
-        >
-          Channel: {trailer.channel}
-        </p>
-
-        <p
-          style={{
-            color: "#94a3b8",
-            marginBottom: "32px",
-          }}
-        >
-          Category: {trailer.category} | Published: {trailer.publishedAt}
-        </p>
-
         <div
           style={{
-            width: "100%",
-            maxWidth: "900px",
-            aspectRatio: "16 / 9",
-            backgroundColor: "#000",
-            borderRadius: "16px",
-            overflow: "hidden",
-            boxShadow: "0 0 30px rgba(255, 255, 255, 0.12)",
+            position: "absolute",
+            top: "24px",
+            right: "40px",
+            fontSize: "110px",
+            color: "rgba(255,255,255,0.9)",
+            pointerEvents: "none",
           }}
         >
-          <iframe
-            src={`https://www.youtube.com/embed/${trailer.videoId}`}
-            title={trailer.title}
-            style={{
-              width: "100%",
-              height: "100%",
-              border: "none",
-            }}
-            allowFullScreen
-          />
+          ❦
         </div>
 
         <div
           style={{
-            display: "flex",
-            gap: "12px",
-            marginTop: "20px",
-            flexWrap: "wrap",
+            position: "relative",
+            zIndex: 1,
+            display: "grid",
+            gridTemplateColumns: "minmax(280px, 1.05fr) minmax(280px, 0.95fr)",
+            gap: "32px",
+            alignItems: "stretch",
           }}
         >
-          <button
-            type="button"
-            onClick={isSaved ? handleRemoveFromWatchlist : handleAddToWatchlist}
+          <div
             style={{
-              padding: "12px 20px",
-              borderRadius: "999px",
-              border: "none",
-              backgroundColor: isSaved ? "#334155" : "#e11d48",
-              color: "white",
-              cursor: "pointer",
-              fontWeight: "bold",
+              backgroundColor: "#fffaf3",
+              border: "1px solid #ead7c4",
+              borderRadius: "30px",
+              padding: "34px",
+              boxShadow: "0 20px 50px rgba(95, 31, 35, 0.12)",
+              position: "relative",
+              overflow: "hidden",
             }}
           >
-            {isSaved ? "Remove from Watchlist" : "Add to Watchlist"}
-          </button>
-
-          <a
-            href="/search"
-            style={{
-              padding: "12px 20px",
-              borderRadius: "999px",
-              border: "1px solid white",
-              color: "white",
-              textDecoration: "none",
-              fontWeight: "bold",
-            }}
-          >
-            ← Back to Search
-          </a>
-        </div>
-
-        <section
-          style={{
-            marginTop: "32px",
-            maxWidth: "900px",
-          }}
-        >
-          <h2
-            style={{
-              fontSize: "24px",
-              marginBottom: "12px",
-            }}
-          >
-            Description
-          </h2>
-
-          <p
-            style={{
-              color: "#cbd5e1",
-              lineHeight: "1.6",
-            }}
-          >
-            {trailer.description}
-          </p>
-        </section>
-
-        <section
-          style={{
-            marginTop: "32px",
-            maxWidth: "900px",
-          }}
-        >
-          <h2
-            style={{
-              fontSize: "24px",
-              marginBottom: "16px",
-            }}
-          >
-            Reviews
-          </h2>
-
-          <form
-            onSubmit={handleSubmitReview}
-            style={{
-              backgroundColor: "#1e293b",
-              border: "1px solid #334155",
-              borderRadius: "16px",
-              padding: "20px",
-              marginBottom: "20px",
-            }}
-          >
-            <h3
+            <div
               style={{
-                fontSize: "18px",
-                marginBottom: "14px",
+                position: "absolute",
+                top: "-18px",
+                right: "-6px",
+                fontSize: "86px",
+                color: "rgba(185, 15, 47, 0.08)",
               }}
             >
-              Write a Review
-            </h3>
+              ❦
+            </div>
 
-            <input
-              type="number"
-              min="1"
-              max="10"
-              placeholder="Rating 1-10"
-              value={rating}
-              onChange={(event) => setRating(event.target.value)}
+            <p
               style={{
-                width: "100%",
-                padding: "12px 14px",
-                borderRadius: "12px",
-                border: "1px solid #475569",
-                backgroundColor: "#0f172a",
-                color: "white",
-                fontSize: "16px",
-                outline: "none",
+                color: "#b90f2f",
+                fontWeight: "bold",
+                letterSpacing: "0.08em",
+                fontSize: "13px",
                 marginBottom: "12px",
               }}
-            />
+            >
+              ❧ RECIPE DETAIL
+            </p>
 
-            <textarea
-              placeholder="Write your comment..."
-              value={comment}
-              onChange={(event) => setComment(event.target.value)}
-              rows={4}
+            <h1
               style={{
-                width: "100%",
-                padding: "12px 14px",
-                borderRadius: "12px",
-                border: "1px solid #475569",
-                backgroundColor: "#0f172a",
-                color: "white",
-                fontSize: "16px",
-                outline: "none",
-                resize: "vertical",
-                marginBottom: "14px",
+                fontSize: "48px",
+                lineHeight: "1.08",
+                marginBottom: "16px",
+                fontFamily: "Georgia, serif",
+                color: "#8f0d25",
+                fontWeight: 500,
               }}
-            />
+            >
+              {recipe.title}
+            </h1>
+
+            <p
+              style={{
+                color: "#7c4a42",
+                lineHeight: "1.8",
+                fontSize: "16px",
+                marginBottom: "22px",
+              }}
+            >
+              {recipe.description}
+            </p>
+
+            <div
+              style={{
+                display: "flex",
+                gap: "10px",
+                flexWrap: "wrap",
+                marginBottom: "26px",
+              }}
+            >
+              <InfoBadge text={recipe.category} />
+              <InfoBadge text={recipe.time} />
+              <InfoBadge text={recipe.difficulty} />
+              <InfoBadge text={recipe.servings} />
+            </div>
 
             <button
-              type="submit"
+              type="button"
+              onClick={isSaved ? handleRemoveRecipe : handleSaveRecipe}
               style={{
-                padding: "12px 20px",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "10px",
+                padding: "14px 24px",
                 borderRadius: "999px",
                 border: "none",
-                backgroundColor: "#e11d48",
+                backgroundColor: isSaved ? "#7c4a42" : "#b90f2f",
                 color: "white",
                 cursor: "pointer",
                 fontWeight: "bold",
+                boxShadow: "0 12px 26px rgba(185, 15, 47, 0.22)",
+                marginRight: "12px",
               }}
             >
-              Submit Review
+              <Heart size={18} />
+              {isSaved ? "Remove Recipe" : "Save Recipe"}
             </button>
 
-            {!isLoggedIn && (
-              <p
+            <a
+              href="/search"
+              style={{
+                display: "inline-flex",
+                padding: "14px 22px",
+                borderRadius: "999px",
+                border: "1px solid #d8b9a6",
+                color: "#7a2d32",
+                textDecoration: "none",
+                fontWeight: "bold",
+                backgroundColor: "rgba(255, 250, 243, 0.82)",
+                marginTop: "12px",
+              }}
+            >
+              ← Back to Search
+            </a>
+          </div>
+
+          <div
+            style={{
+              borderRadius: "30px",
+              overflow: "hidden",
+              border: "1px solid #ead7c4",
+              boxShadow: "0 20px 50px rgba(95, 31, 35, 0.14)",
+              backgroundColor: "#fffaf3",
+              position: "relative",
+              minHeight: "360px",
+            }}
+          >
+            <img
+              src={recipe.thumbnail}
+              alt={recipe.title}
+              style={{
+                width: "100%",
+                height: "100%",
+                minHeight: "360px",
+                objectFit: "cover",
+                display: "block",
+              }}
+            />
+
+            <div
+              style={{
+                position: "absolute",
+                inset: "18px",
+                border: "1px solid rgba(255,255,255,0.9)",
+                borderRadius: "22px",
+                pointerEvents: "none",
+              }}
+            />
+
+            <div
+              style={{
+                position: "absolute",
+                left: "22px",
+                bottom: "22px",
+                padding: "10px 16px",
+                borderRadius: "999px",
+                backgroundColor: "rgba(255, 250, 243, 0.92)",
+                color: "#b90f2f",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
+                fontWeight: "bold",
+              }}
+            >
+              <ChefHat size={18} />
+              Cozy recipe
+            </div>
+          </div>
+        </div>
+
+        <div
+          style={{
+            position: "relative",
+            zIndex: 1,
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+            gap: "24px",
+            marginTop: "28px",
+          }}
+        >
+          <RecipePanel title="Ingredients">
+            <ul
+              style={{
+                margin: 0,
+                paddingLeft: "20px",
+                color: "#7c4a42",
+                lineHeight: "1.9",
+              }}
+            >
+              {recipe.ingredients.map((ingredient) => (
+                <li key={ingredient}>{ingredient}</li>
+              ))}
+            </ul>
+          </RecipePanel>
+
+          <RecipePanel title="Cooking Steps">
+            <ol
+              style={{
+                margin: 0,
+                paddingLeft: "20px",
+                color: "#7c4a42",
+                lineHeight: "1.9",
+              }}
+            >
+              {recipe.steps.map((step) => (
+                <li key={step}>{step}</li>
+              ))}
+            </ol>
+          </RecipePanel>
+        </div>
+
+        <RecipePanel title="Reviews" extraStyle={{ marginTop: "28px" }}>
+          <form onSubmit={handleSubmitReview}>
+            <div
+              style={{
+                display: "flex",
+                gap: "12px",
+                flexWrap: "wrap",
+                marginBottom: "12px",
+              }}
+            >
+              <input
+                type="number"
+                placeholder="Rating 1-10"
+                value={rating}
+                onChange={(event) => setRating(event.target.value)}
+                style={inputStyle}
+              />
+
+              <input
+                type="text"
+                placeholder="Write your review..."
+                value={comment}
+                onChange={(event) => setComment(event.target.value)}
                 style={{
-                  color: "#94a3b8",
-                  fontSize: "14px",
-                  marginTop: "12px",
+                  ...inputStyle,
+                  flex: 1,
+                  minWidth: "240px",
+                }}
+              />
+
+              <button
+                type="submit"
+                style={{
+                  padding: "13px 20px",
+                  borderRadius: "16px",
+                  border: "none",
+                  backgroundColor: "#b90f2f",
+                  color: "white",
+                  cursor: "pointer",
+                  fontWeight: "bold",
                 }}
               >
-                You need to login before submitting a review.
-              </p>
-            )}
+                Add Review
+              </button>
+            </div>
           </form>
 
           {reviews.length === 0 ? (
-            <div
+            <p
               style={{
-                backgroundColor: "#1e293b",
-                border: "1px solid #334155",
-                borderRadius: "16px",
-                padding: "20px",
-                color: "#cbd5e1",
+                color: "#8a5c52",
+                marginTop: "14px",
               }}
             >
-              No reviews yet. Be the first to review this trailer.
-            </div>
+              No reviews yet. Be the first to review this recipe.
+            </p>
           ) : (
-            reviews.map((review) => (
-              <div
-                key={review.id}
-                style={{
-                  backgroundColor: "#1e293b",
-                  border: "1px solid #334155",
-                  borderRadius: "16px",
-                  padding: "20px",
-                  marginBottom: "16px",
-                }}
-              >
-                <p
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "12px",
+                marginTop: "18px",
+              }}
+            >
+              {reviews.map((review) => (
+                <div
+                  key={review.id}
                   style={{
-                    fontWeight: "bold",
-                    marginBottom: "8px",
+                    padding: "16px",
+                    borderRadius: "18px",
+                    backgroundColor: "#fff7ed",
+                    border: "1px solid #ead7c4",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    gap: "14px",
+                    alignItems: "flex-start",
                   }}
                 >
-                  Rating: {review.rating}/10
-                </p>
+                  <div>
+                    <p
+                      style={{
+                        color: "#b90f2f",
+                        fontWeight: "bold",
+                        marginBottom: "6px",
+                      }}
+                    >
+                      Rating: {review.rating}/10
+                    </p>
 
-                <p
-                  style={{
-                    color: "#cbd5e1",
-                    lineHeight: "1.6",
-                    marginBottom: "14px",
-                  }}
-                >
-                  {review.comment}
-                </p>
+                    <p
+                      style={{
+                        color: "#7c4a42",
+                        lineHeight: "1.6",
+                      }}
+                    >
+                      {review.comment}
+                    </p>
+                  </div>
 
-                <button
-                  type="button"
-                  onClick={() => handleDeleteReview(review.id)}
-                  style={{
-                    padding: "8px 14px",
-                    borderRadius: "999px",
-                    border: "1px solid #475569",
-                    backgroundColor: "transparent",
-                    color: "white",
-                    cursor: "pointer",
-                    fontWeight: "bold",
-                  }}
-                >
-                  Delete Review
-                </button>
-              </div>
-            ))
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteReview(review.id)}
+                    style={{
+                      border: "none",
+                      backgroundColor: "transparent",
+                      color: "#b90f2f",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                </div>
+              ))}
+            </div>
           )}
-        </section>
+        </RecipePanel>
       </section>
     </main>
   );
 }
+
+function InfoBadge({ text }: { text: string }) {
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: "6px",
+        padding: "9px 14px",
+        borderRadius: "999px",
+        backgroundColor: "#fff7ed",
+        border: "1px solid #ead7c4",
+        color: "#8f0d25",
+        fontWeight: "600",
+      }}
+    >
+      <Clock size={14} />
+      {text}
+    </span>
+  );
+}
+
+function RecipePanel({
+  title,
+  children,
+  extraStyle,
+}: {
+  title: string;
+  children: React.ReactNode;
+  extraStyle?: React.CSSProperties;
+}) {
+  return (
+    <section
+      style={{
+        backgroundColor: "#fffaf3",
+        border: "1px solid #ead7c4",
+        borderRadius: "26px",
+        padding: "26px",
+        boxShadow: "0 16px 34px rgba(95, 31, 35, 0.1)",
+        position: "relative",
+        overflow: "hidden",
+        ...extraStyle,
+      }}
+    >
+      <div
+        style={{
+          position: "absolute",
+          top: "-18px",
+          right: "0",
+          fontSize: "76px",
+          color: "rgba(185, 15, 47, 0.07)",
+          pointerEvents: "none",
+        }}
+      >
+        ❦
+      </div>
+
+      <h2
+        style={{
+          fontSize: "26px",
+          fontFamily: "Georgia, serif",
+          color: "#8f0d25",
+          marginBottom: "16px",
+          fontWeight: 500,
+        }}
+      >
+        ❧ {title}
+      </h2>
+
+      {children}
+    </section>
+  );
+}
+
+const inputStyle: React.CSSProperties = {
+  padding: "13px 16px",
+  borderRadius: "16px",
+  border: "1px solid #ead7c4",
+  backgroundColor: "#fff7ed",
+  color: "#5f1f23",
+  fontSize: "15px",
+  outline: "none",
+};

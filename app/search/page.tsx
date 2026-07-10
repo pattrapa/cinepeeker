@@ -3,57 +3,68 @@
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Navbar from "@/app/components/Navbar";
-import { Search } from "lucide-react";
+import { Search, Clock, ChefHat } from "lucide-react";
 
-type Trailer = {
+type Recipe = {
   id: number;
   title: string;
-  channel: string;
   category: string;
-  publishedAt: string;
+  time: string;
+  difficulty: string;
+  description: string;
   thumbnail: string;
 };
 
-const searchResults: Trailer[] = [
+const recipes: Recipe[] = [
   {
     id: 1,
-    title: "Avatar Official Trailer",
-    category: "Sci-Fi",
-    channel: "20th Century Studios",
-    publishedAt: "2009",
-    thumbnail: "https://img.youtube.com/vi/5PSNL1qE6VY/hqdefault.jpg",
+    title: "Cherry Cream Cake",
+    category: "Dessert",
+    time: "45 mins",
+    difficulty: "Medium",
+    description: "A soft cream cake with sweet cherry topping.",
+    thumbnail:
+      "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=900&q=80",
   },
   {
     id: 2,
-    title: "Wednesday Official Trailer",
-    category: "Fantasy",
-    channel: "Netflix",
-    publishedAt: "2022",
-    thumbnail: "https://img.youtube.com/vi/Di310WS8zLk/hqdefault.jpg",
+    title: "Strawberry Pancakes",
+    category: "Breakfast",
+    time: "25 mins",
+    difficulty: "Easy",
+    description: "Fluffy pancakes topped with strawberry and cream.",
+    thumbnail:
+      "https://images.unsplash.com/photo-1528207776546-365bb710ee93?auto=format&fit=crop&w=900&q=80",
   },
   {
     id: 3,
-    title: "Inside Out 2 Official Trailer",
-    category: "Animation",
-    channel: "Pixar",
-    publishedAt: "2024",
-    thumbnail: "https://img.youtube.com/vi/LEjhY15eCx0/hqdefault.jpg",
+    title: "Creamy Tomato Pasta",
+    category: "Pasta",
+    time: "30 mins",
+    difficulty: "Easy",
+    description: "Creamy pasta with tomato sauce and herbs.",
+    thumbnail:
+      "https://images.unsplash.com/photo-1621996346565-e3dbc646d9a9?auto=format&fit=crop&w=900&q=80",
   },
   {
     id: 4,
-    title: "The Batman Official Trailer",
-    category: "Action",
-    channel: "Warner Bros. Pictures",
-    publishedAt: "2022",
-    thumbnail: "https://img.youtube.com/vi/mqqft2x_Aa4/hqdefault.jpg",
+    title: "Thai Basil Chicken",
+    category: "Thai Food",
+    time: "35 mins",
+    difficulty: "Medium",
+    description: "A tasty Thai stir-fry recipe with basil and chicken.",
+    thumbnail:
+      "https://images.unsplash.com/photo-1562565652-a0d8f0c59eb4?auto=format&fit=crop&w=900&q=80",
   },
   {
     id: 5,
-    title: "Spider-Man: No Way Home Official Trailer",
-    category: "Superhero",
-    channel: "Sony Pictures Entertainment",
-    publishedAt: "2021",
-    thumbnail: "https://img.youtube.com/vi/JfVOs4VSpmA/hqdefault.jpg",
+    title: "Cherry Lemon Soda",
+    category: "Drinks",
+    time: "10 mins",
+    difficulty: "Easy",
+    description: "A refreshing cherry lemon soda for a cozy afternoon.",
+    thumbnail:
+      "https://images.unsplash.com/photo-1544145945-f90425340c7e?auto=format&fit=crop&w=900&q=80",
   },
 ];
 
@@ -65,8 +76,9 @@ export default function SearchPage() {
 
   const normalizedSearchText = searchText.toLowerCase().trim();
 
-  const filteredResults = searchResults.filter((trailer) => {
-    const searchableText = `${trailer.title} ${trailer.category} ${trailer.channel} ${trailer.publishedAt}`.toLowerCase();
+  const filteredRecipes = recipes.filter((recipe) => {
+    const searchableText =
+      `${recipe.title} ${recipe.category} ${recipe.time} ${recipe.difficulty} ${recipe.description}`.toLowerCase();
 
     return searchableText.includes(normalizedSearchText);
   });
@@ -79,251 +91,385 @@ export default function SearchPage() {
     <main
       style={{
         minHeight: "100vh",
-        backgroundColor: "#0f172a",
-        color: "white",
+        background:
+          "radial-gradient(circle at top left, rgba(255,255,255,0.95), transparent 26%), linear-gradient(180deg, #fff7ed 0%, #fffaf3 48%, #f9eadf 100%)",
+        color: "#5f1f23",
       }}
     >
       <Navbar />
 
       <section
         style={{
-          padding: "50px 60px",
+          padding: "48px 60px 70px",
+          position: "relative",
+          overflow: "hidden",
         }}
       >
-        <h1
+        <div
           style={{
-            fontSize: "36px",
-            fontWeight: "bold",
-            marginBottom: "12px",
+            position: "absolute",
+            top: "18px",
+            right: "40px",
+            fontSize: "110px",
+            color: "rgba(255, 255, 255, 0.86)",
+            pointerEvents: "none",
           }}
         >
-          Search Trailer
-        </h1>
-
-        <p
-          style={{
-            color: "#cbd5e1",
-            marginBottom: "24px",
-          }}
-        >
-          ค้นหาตัวอย่างหนังหรือซีรีส์ที่คุณสนใจ
-        </p>
+          ❦
+        </div>
 
         <div
           style={{
-            display: "flex",
-            gap: "12px",
-            marginBottom: "32px",
-            flexWrap: "wrap",
+            position: "relative",
+            zIndex: 1,
           }}
         >
-          <input
-            type="text"
-            placeholder="Type movie or series name..."
-            value={searchText}
-            onChange={(event) => setSearchText(event.target.value)}
+          <p
             style={{
-              width: "360px",
-              maxWidth: "100%",
-              padding: "12px 16px",
-              fontSize: "16px",
-              border: "1px solid #334155",
-              borderRadius: "14px",
-              outline: "none",
-              backgroundColor: "#111827",
-              color: "white",
-              boxShadow: "0 0 15px rgba(255, 255, 255, 0.18)",
-            }}
-          />
-
-          <a
-            href={searchHref}
-            style={{
-              padding: "14px 24px",
-              fontSize: "16px",
-              borderRadius: "14px",
-              backgroundColor: "#e11d48",
-              color: "white",
-              cursor: "pointer",
-              textDecoration: "none",
+              color: "#b90f2f",
               fontWeight: "bold",
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
+              letterSpacing: "0.08em",
+              fontSize: "13px",
+              marginBottom: "12px",
             }}
           >
-            <Search size={18} />
-            Search
-          </a>
-        </div>
+            ❧ RECIPE SEARCH
+          </p>
 
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            gap: "16px",
-            flexWrap: "wrap",
-            marginBottom: "20px",
-          }}
-        >
-          <h2
+          <h1
             style={{
-              fontSize: "24px",
+              fontSize: "44px",
+              fontFamily: "Georgia, serif",
+              color: "#8f0d25",
+              marginBottom: "10px",
+              fontWeight: 500,
             }}
           >
-            Search Results
-          </h2>
+            Search Recipes
+          </h1>
 
-          {searchText.trim() && (
-            <p
-              style={{
-                color: "#94a3b8",
-              }}
-            >
-              Showing results for:{" "}
-              <span
-                style={{
-                  color: "#fb7185",
-                  fontWeight: "bold",
-                }}
-              >
-                {searchText}
-              </span>
-            </p>
-          )}
-        </div>
-
-        {filteredResults.length === 0 ? (
-          <div
+          <p
             style={{
-              padding: "28px",
-              borderRadius: "18px",
-              backgroundColor: "#1e293b",
-              border: "1px solid #334155",
-              color: "#cbd5e1",
+              color: "#8a5c52",
+              marginBottom: "28px",
+              lineHeight: "1.7",
               maxWidth: "720px",
             }}
           >
-            <h3
-              style={{
-                color: "white",
-                fontSize: "22px",
-                marginBottom: "8px",
-              }}
-            >
-              No results found
-            </h3>
+            ค้นหาเมนูอาหาร ขนม เครื่องดื่ม หรือไอเดียทำอาหารที่อยากลองทำ
+          </p>
 
-            <p
-              style={{
-                lineHeight: "1.6",
-                marginBottom: "18px",
-              }}
-            >
-              ไม่พบ trailer ที่ตรงกับคำค้นนี้ ลองค้นหาด้วยชื่อหนัง ซีรีส์ หรือชื่อช่องอีกครั้ง
-            </p>
-
-            <button
-              type="button"
-              onClick={() => setSearchText("")}
-              style={{
-                padding: "12px 18px",
-                borderRadius: "999px",
-                border: "none",
-                backgroundColor: "#e11d48",
-                color: "white",
-                cursor: "pointer",
-                fontWeight: "bold",
-              }}
-            >
-              Clear Search
-            </button>
-          </div>
-        ) : (
           <div
             style={{
               display: "flex",
-              flexDirection: "column",
-              gap: "20px",
+              gap: "12px",
+              marginBottom: "34px",
+              flexWrap: "wrap",
+              padding: "10px",
+              borderRadius: "24px",
+              backgroundColor: "rgba(255, 250, 243, 0.9)",
+              border: "1px solid #ead7c4",
+              boxShadow: "0 16px 32px rgba(95, 31, 35, 0.1)",
+              maxWidth: "720px",
             }}
           >
-            {filteredResults.map((trailer) => (
-              <a
-                key={trailer.id}
-                href={`/trailer/${trailer.id}`}
+            <input
+              type="text"
+              placeholder="Type recipe name or category..."
+              value={searchText}
+              onChange={(event) => setSearchText(event.target.value)}
+              style={{
+                flex: 1,
+                minWidth: "230px",
+                padding: "14px 16px",
+                fontSize: "16px",
+                border: "none",
+                borderRadius: "16px",
+                outline: "none",
+                backgroundColor: "transparent",
+                color: "#5f1f23",
+              }}
+            />
+
+            <a
+              href={searchHref}
+              style={{
+                padding: "14px 24px",
+                fontSize: "16px",
+                borderRadius: "16px",
+                backgroundColor: "#b90f2f",
+                color: "white",
+                cursor: "pointer",
+                textDecoration: "none",
+                fontWeight: "bold",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                boxShadow: "0 12px 26px rgba(185, 15, 47, 0.22)",
+              }}
+            >
+              <Search size={18} />
+              Search
+            </a>
+          </div>
+
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: "16px",
+              flexWrap: "wrap",
+              marginBottom: "22px",
+            }}
+          >
+            <h2
+              style={{
+                fontSize: "28px",
+                fontFamily: "Georgia, serif",
+                color: "#8f0d25",
+                fontWeight: 500,
+              }}
+            >
+              ❧ Recipe Results
+            </h2>
+
+            {searchText.trim() && (
+              <p
                 style={{
-                  display: "flex",
-                  gap: "20px",
-                  padding: "16px",
-                  borderRadius: "16px",
-                  backgroundColor: "#1e293b",
-                  border: "1px solid #334155",
-                  textDecoration: "none",
-                  color: "white",
-                  cursor: "pointer",
-                  boxShadow: "0 0 15px rgba(255, 255, 255, 0.08)",
-                  flexWrap: "wrap",
+                  color: "#8a5c52",
                 }}
               >
-                <img
-                  src={trailer.thumbnail}
-                  alt={trailer.title}
+                Showing results for:{" "}
+                <span
                   style={{
-                    width: "220px",
-                    maxWidth: "100%",
-                    height: "130px",
-                    objectFit: "cover",
-                    borderRadius: "12px",
-                  }}
-                />
-
-                <div
-                  style={{
-                    flex: 1,
-                    minWidth: "220px",
+                    color: "#b90f2f",
+                    fontWeight: "bold",
                   }}
                 >
-                  <h3
-                    style={{
-                      fontSize: "20px",
-                      marginBottom: "8px",
-                    }}
-                  >
-                    {trailer.title}
-                  </h3>
-
-                  <p
-                    style={{
-                      color: "#94a3b8",
-                      marginBottom: "6px",
-                    }}
-                  >
-                    Channel: {trailer.channel}
-                  </p>
-
-                  <p
-                    style={{
-                      color: "#94a3b8",
-                      marginBottom: "16px",
-                    }}
-                  >
-                    Published: {trailer.publishedAt}
-                  </p>
-
-                  <p
-                    style={{
-                      color: "#fb7185",
-                      fontWeight: "bold",
-                    }}
-                  >
-                    Click to view trailer →
-                  </p>
-                </div>
-              </a>
-            ))}
+                  {searchText}
+                </span>
+              </p>
+            )}
           </div>
-        )}
+
+          {filteredRecipes.length === 0 ? (
+            <div
+              style={{
+                padding: "32px",
+                borderRadius: "24px",
+                backgroundColor: "#fffaf3",
+                border: "1px solid #ead7c4",
+                color: "#7c4a42",
+                maxWidth: "720px",
+                boxShadow: "0 16px 34px rgba(95, 31, 35, 0.1)",
+                position: "relative",
+                overflow: "hidden",
+              }}
+            >
+              <div
+                style={{
+                  position: "absolute",
+                  top: "-18px",
+                  right: "0",
+                  fontSize: "80px",
+                  color: "rgba(185, 15, 47, 0.08)",
+                }}
+              >
+                ❦
+              </div>
+
+              <h3
+                style={{
+                  color: "#8f0d25",
+                  fontSize: "24px",
+                  marginBottom: "8px",
+                  fontFamily: "Georgia, serif",
+                }}
+              >
+                No recipes found
+              </h3>
+
+              <p
+                style={{
+                  lineHeight: "1.7",
+                  marginBottom: "18px",
+                }}
+              >
+                ไม่พบสูตรอาหารที่ตรงกับคำค้นนี้ ลองค้นหาด้วยชื่อเมนูหรือหมวดหมู่อีกครั้ง
+              </p>
+
+              <button
+                type="button"
+                onClick={() => setSearchText("")}
+                style={{
+                  padding: "12px 18px",
+                  borderRadius: "999px",
+                  border: "none",
+                  backgroundColor: "#b90f2f",
+                  color: "white",
+                  cursor: "pointer",
+                  fontWeight: "bold",
+                }}
+              >
+                Clear Search
+              </button>
+            </div>
+          ) : (
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+                gap: "24px",
+              }}
+            >
+              {filteredRecipes.map((recipe) => (
+                <a
+                  key={recipe.id}
+                  href={`/trailer/${recipe.id}`}
+                  style={{
+                    backgroundColor: "#fffaf3",
+                    borderRadius: "22px",
+                    overflow: "hidden",
+                    border: "1px solid #ead7c4",
+                    textDecoration: "none",
+                    color: "#5f1f23",
+                    cursor: "pointer",
+                    boxShadow: "0 16px 34px rgba(95, 31, 35, 0.11)",
+                    display: "block",
+                    position: "relative",
+                  }}
+                >
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: "8px",
+                      right: "10px",
+                      zIndex: 2,
+                      color: "white",
+                      fontSize: "34px",
+                      textShadow: "0 2px 10px rgba(0,0,0,0.2)",
+                      pointerEvents: "none",
+                    }}
+                  >
+                    ❦
+                  </div>
+
+                  <div
+                    style={{
+                      position: "relative",
+                    }}
+                  >
+                    <img
+                      src={recipe.thumbnail}
+                      alt={recipe.title}
+                      style={{
+                        width: "100%",
+                        height: "170px",
+                        objectFit: "cover",
+                        display: "block",
+                      }}
+                    />
+
+                    <span
+                      style={{
+                        position: "absolute",
+                        left: "14px",
+                        bottom: "12px",
+                        width: "38px",
+                        height: "38px",
+                        borderRadius: "50%",
+                        backgroundColor: "rgba(255, 250, 243, 0.94)",
+                        color: "#b90f2f",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        boxShadow: "0 8px 18px rgba(95, 31, 35, 0.18)",
+                      }}
+                    >
+                      <ChefHat size={18} />
+                    </span>
+                  </div>
+
+                  <div
+                    style={{
+                      padding: "18px",
+                    }}
+                  >
+                    <p
+                      style={{
+                        color: "#b90f2f",
+                        fontSize: "14px",
+                        marginBottom: "8px",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      {recipe.category}
+                    </p>
+
+                    <h3
+                      style={{
+                        fontSize: "20px",
+                        marginBottom: "10px",
+                        lineHeight: "1.35",
+                        color: "#8f0d25",
+                        fontFamily: "Georgia, serif",
+                        fontWeight: 500,
+                      }}
+                    >
+                      {recipe.title}
+                    </h3>
+
+                    <p
+                      style={{
+                        color: "#8a5c52",
+                        lineHeight: "1.6",
+                        marginBottom: "14px",
+                        fontSize: "14px",
+                      }}
+                    >
+                      {recipe.description}
+                    </p>
+
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "12px",
+                        color: "#7c4a42",
+                        fontSize: "14px",
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      <span
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "5px",
+                        }}
+                      >
+                        <Clock size={15} />
+                        {recipe.time}
+                      </span>
+
+                      <span>• {recipe.difficulty}</span>
+                    </div>
+
+                    <p
+                      style={{
+                        color: "#b90f2f",
+                        fontWeight: "bold",
+                        marginTop: "16px",
+                      }}
+                    >
+                      View recipe →
+                    </p>
+                  </div>
+                </a>
+              ))}
+            </div>
+          )}
+        </div>
       </section>
     </main>
   );
