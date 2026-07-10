@@ -2,487 +2,800 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Navbar from "@/app/components/Navbar";
-import { ChefHat, Heart, Trash2 } from "lucide-react";
+import { useSession } from "next-auth/react";
+import {
+  ArrowLeft,
+  ChefHat,
+  CookingPot,
+  Eye,
+  Heart,
+  Sparkles,
+  Trash2,
+} from "lucide-react";
 
-type RecipeStatus = "Want to Watch" | "Watched" | "Favorite";
+type SavedRecipeStatus =
+  | "Want to Watch"
+  | "Watched"
+  | "Favorite";
 
 type SavedRecipeItem = {
   id: number;
   title: string;
   channel: string;
   thumbnail: string;
-  status: RecipeStatus;
+  status: SavedRecipeStatus;
 };
 
-const statusOptions: RecipeStatus[] = [
-  "Want to Watch",
-  "Watched",
-  "Favorite",
+const statusOptions: {
+  value: SavedRecipeStatus;
+  label: string;
+}[] = [
+  {
+    value: "Want to Watch",
+    label: "Want to Cook",
+  },
+  {
+    value: "Watched",
+    label: "Cooked",
+  },
+  {
+    value: "Favorite",
+    label: "Favorite",
+  },
 ];
-
-const statusLabels: Record<RecipeStatus, string> = {
-  "Want to Watch": "Want to Cook",
-  Watched: "Cooked",
-  Favorite: "Favorite",
-};
 
 export default function WatchlistPage() {
   const router = useRouter();
 
-  const [savedRecipes, setSavedRecipes] = useState<SavedRecipeItem[]>([]);
-  const [toast, setToast] = useState("");
-  const [isCheckingLogin, setIsCheckingLogin] = useState(true);
+  const { status: sessionStatus } = useSession();
 
-  const showToast = (message: string) => {
-    setToast(message);
+  const [isMockLoggedIn, setIsMockLoggedIn] =
+    useState(false);
 
-    setTimeout(() => {
-      setToast("");
-    }, 2400);
-  };
+  const [isAuthChecked, setIsAuthChecked] =
+    useState(false);
 
+  const [isLoadingRecipes, setIsLoadingRecipes] =
+    useState(true);
+
+  const [savedRecipes, setSavedRecipes] = useState<
+    SavedRecipeItem[]
+  >([]);
+
+  const isGoogleLoggedIn =
+    sessionStatus === "authenticated";
+
+  const isLoggedIn =
+    isMockLoggedIn || isGoogleLoggedIn;
+
+  /*
+    ตรวจ Mock Login จาก localStorage
+    ทำครั้งเดียวหลัง Component โหลดใน Browser
+  */
   useEffect(() => {
-    const loginStatus = localStorage.getItem("isLoggedIn");
+    const mockLoginStatus =
+      localStorage.getItem("isLoggedIn") === "true";
 
-    if (loginStatus !== "true") {
-      router.push("/login?redirect=/watchlist");
+    setIsMockLoggedIn(mockLoginStatus);
+    setIsAuthChecked(true);
+  }, []);
+
+  /*
+    Redirect หลังตรวจครบทั้ง:
+    1. Mock Login
+    2. Google Session
+
+    ห้าม redirect ตอน sessionStatus === "loading"
+    เพราะ Google Session อาจกำลังโหลดอยู่
+  */
+  useEffect(() => {
+    if (!isAuthChecked) {
       return;
     }
 
-    const savedData = localStorage.getItem("watchlist");
-    const parsedRecipes = savedData ? JSON.parse(savedData) : [];
+    if (sessionStatus === "loading") {
+      return;
+    }
 
-    setSavedRecipes(parsedRecipes);
-    setIsCheckingLogin(false);
-  }, [router]);
+    if (!isLoggedIn) {
+      router.replace(
+        `/login?redirect=${encodeURIComponent(
+          "/watchlist",
+        )}`,
+      );
+    }
+  }, [
+    isAuthChecked,
+    sessionStatus,
+    isLoggedIn,
+    router,
+  ]);
 
-  const saveToLocalStorage = (updatedRecipes: SavedRecipeItem[]) => {
-    localStorage.setItem("watchlist", JSON.stringify(updatedRecipes));
-    setSavedRecipes(updatedRecipes);
-  };
+  /*
+    โหลด Saved Recipes หลังจากยืนยันแล้วว่า Login อยู่
+  */
+  useEffect(() => {
+    if (!isAuthChecked) {
+      return;
+    }
 
-  const handleStatusChange = (recipeId: number, newStatus: RecipeStatus) => {
-    const updatedRecipes = savedRecipes.map((recipe) =>
-      recipe.id === recipeId
-        ? {
-            ...recipe,
-            status: newStatus,
-          }
-        : recipe
+    if (sessionStatus === "loading") {
+      return;
+    }
+
+    if (!isLoggedIn) {
+      setIsLoadingRecipes(false);
+      return;
+    }
+
+    try {
+      const storedWatchlist = localStorage.getItem(
+        "watchlist",
+      );
+
+      if (!storedWatchlist) {
+        setSavedRecipes([]);
+        setIsLoadingRecipes(false);
+        return;
+      }
+
+      const parsedWatchlist: unknown =
+        JSON.parse(storedWatchlist);
+
+      if (!Array.isArray(parsedWatchlist)) {
+        localStorage.setItem("watchlist", "[]");
+        setSavedRecipes([]);
+        setIsLoadingRecipes(false);
+        return;
+      }
+
+      setSavedRecipes(
+        parsedWatchlist as SavedRecipeItem[],
+      );
+    } catch (error) {
+      console.error(
+        "Unable to read saved recipes:",
+        error,
+      );
+
+      localStorage.setItem("watchlist", "[]");
+      setSavedRecipes([]);
+    } finally {
+      setIsLoadingRecipes(false);
+    }
+  }, [
+    isAuthChecked,
+    sessionStatus,
+    isLoggedIn,
+  ]);
+
+  const saveRecipesToLocalStorage = (
+    recipes: SavedRecipeItem[],
+  ) => {
+    localStorage.setItem(
+      "watchlist",
+      JSON.stringify(recipes),
     );
 
-    saveToLocalStorage(updatedRecipes);
-    showToast("Recipe status updated ✨");
+    setSavedRecipes(recipes);
+  };
+
+  const handleStatusChange = (
+    recipeId: number,
+    newStatus: SavedRecipeStatus,
+  ) => {
+    const updatedRecipes = savedRecipes.map(
+      (recipe) =>
+        Number(recipe.id) === Number(recipeId)
+          ? {
+              ...recipe,
+              status: newStatus,
+            }
+          : recipe,
+    );
+
+    saveRecipesToLocalStorage(updatedRecipes);
   };
 
   const handleRemoveRecipe = (recipeId: number) => {
     const updatedRecipes = savedRecipes.filter(
-      (recipe) => recipe.id !== recipeId
+      (recipe) =>
+        Number(recipe.id) !== Number(recipeId),
     );
 
-    saveToLocalStorage(updatedRecipes);
-    showToast("Recipe removed from Saved Recipes.");
+    saveRecipesToLocalStorage(updatedRecipes);
   };
 
-  if (isCheckingLogin) {
-    return (
-      <main
-        style={{
-          minHeight: "100vh",
-          background:
-            "linear-gradient(180deg, #fff7ed 0%, #fffaf3 45%, #f9eadf 100%)",
-          color: "#5f1f23",
-        }}
-      >
-        <Navbar />
+  const handleViewRecipe = (recipeId: number) => {
+    router.push(`/trailer/${recipeId}`);
+  };
 
-        <section
-          style={{
-            padding: "48px 60px",
-          }}
-        >
-          <p
-            style={{
-              color: "#8a5c52",
-              fontSize: "18px",
-            }}
-          >
-            Checking login status...
-          </p>
-        </section>
+  const getStatusLabel = (
+    status: SavedRecipeStatus,
+  ) => {
+    const matchedStatus = statusOptions.find(
+      (option) => option.value === status,
+    );
+
+    return matchedStatus?.label || status;
+  };
+
+  /*
+    แสดง Loading ระหว่างตรวจ session
+    เพื่อป้องกันหน้าเด้งไป Login ก่อน Google Session โหลดเสร็จ
+  */
+  if (
+    !isAuthChecked ||
+    sessionStatus === "loading" ||
+    isLoadingRecipes
+  ) {
+    return (
+      <main style={loadingPageStyle}>
+        <div style={loadingIconStyle}>
+          <CookingPot
+            size={39}
+            strokeWidth={1.7}
+          />
+        </div>
+
+        <p style={loadingTextStyle}>
+          Preparing your saved recipes...
+        </p>
+      </main>
+    );
+  }
+
+  /*
+    ระหว่าง router.replace กำลังส่งไปหน้า Login
+    ไม่แสดงเนื้อหา Saved Recipes
+  */
+  if (!isLoggedIn) {
+    return (
+      <main style={loadingPageStyle}>
+        <div style={loadingIconStyle}>
+          <CookingPot
+            size={39}
+            strokeWidth={1.7}
+          />
+        </div>
+
+        <p style={loadingTextStyle}>
+          Redirecting to login...
+        </p>
       </main>
     );
   }
 
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        background:
-          "radial-gradient(circle at top left, rgba(255,255,255,0.95), transparent 28%), linear-gradient(180deg, #fff7ed 0%, #fffaf3 48%, #f9eadf 100%)",
-        color: "#5f1f23",
-      }}
-    >
-      <Navbar />
-
-      {toast && (
-        <div
-          style={{
-            position: "fixed",
-            top: "96px",
-            right: "32px",
-            zIndex: 2000,
-            backgroundColor: "#fffaf3",
-            color: "#5f1f23",
-            border: "1px solid #ead7c4",
-            borderLeft: "5px solid #b90f2f",
-            borderRadius: "18px",
-            padding: "16px 20px",
-            boxShadow: "0 20px 50px rgba(95, 31, 35, 0.18)",
-            fontWeight: "600",
-            maxWidth: "340px",
-          }}
+    <main style={pageStyle}>
+      <div style={pageContainerStyle}>
+        <button
+          type="button"
+          onClick={() => router.push("/")}
+          style={backButtonStyle}
         >
-          {toast}
-        </div>
-      )}
+          <ArrowLeft size={18} />
+          Back to Home
+        </button>
 
-      <section
-        style={{
-          padding: "48px 60px 70px",
-          position: "relative",
-          overflow: "hidden",
-        }}
-      >
-        <div
-          style={{
-            position: "absolute",
-            top: "20px",
-            right: "40px",
-            fontSize: "110px",
-            color: "rgba(255, 255, 255, 0.9)",
-            pointerEvents: "none",
-          }}
-        >
-          ❦
-        </div>
+        <section style={headingSectionStyle}>
+          <div style={headingDecorationStyle}>
+            ❦ Your personal collection ❦
+          </div>
 
-        <div
-          style={{
-            position: "relative",
-            zIndex: 1,
-          }}
-        >
-          <p
-            style={{
-              color: "#b90f2f",
-              fontWeight: "bold",
-              letterSpacing: "0.08em",
-              fontSize: "13px",
-              marginBottom: "12px",
-            }}
-          >
-            ❧ SAVED COLLECTION
-          </p>
-
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              gap: "18px",
-              flexWrap: "wrap",
-              marginBottom: "28px",
-            }}
-          >
+          <div style={headingRowStyle}>
             <div>
-              <h1
-                style={{
-                  fontSize: "44px",
-                  fontFamily: "Georgia, serif",
-                  color: "#8f0d25",
-                  marginBottom: "10px",
-                  fontWeight: 500,
-                }}
-              >
+              <h1 style={pageHeadingStyle}>
                 Saved Recipes
               </h1>
 
-              <p
-                style={{
-                  color: "#8a5c52",
-                  lineHeight: "1.7",
-                  maxWidth: "700px",
-                }}
-              >
-                เก็บเมนูที่อยากลองทำ เปลี่ยนสถานะ และกลับมาดูสูตรได้ทุกเวลา
+              <p style={pageDescriptionStyle}>
+                Keep your favorite recipes together and
+                organize what you would love to cook next.
               </p>
             </div>
 
-            <a
-              href="/search"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "8px",
-                padding: "14px 22px",
-                borderRadius: "999px",
-                backgroundColor: "#b90f2f",
-                color: "white",
-                textDecoration: "none",
-                fontWeight: "bold",
-                boxShadow: "0 12px 26px rgba(185, 15, 47, 0.22)",
-              }}
-            >
-              <ChefHat size={18} />
-              Browse Recipes
-            </a>
-          </div>
-
-          {savedRecipes.length === 0 ? (
-            <div
-              style={{
-                padding: "36px",
-                borderRadius: "28px",
-                backgroundColor: "#fffaf3",
-                border: "1px solid #ead7c4",
-                boxShadow: "0 18px 42px rgba(95, 31, 35, 0.1)",
-                maxWidth: "760px",
-                position: "relative",
-                overflow: "hidden",
-              }}
-            >
-              <div
-                style={{
-                  position: "absolute",
-                  top: "-18px",
-                  right: "0",
-                  fontSize: "86px",
-                  color: "rgba(185, 15, 47, 0.08)",
-                }}
-              >
-                ❦
-              </div>
-
+            <div style={recipeCountStyle}>
               <Heart
-                size={42}
-                style={{
-                  color: "#b90f2f",
-                  marginBottom: "14px",
-                }}
+                size={19}
+                color="#b90f2f"
+                fill="#b90f2f"
               />
 
-              <h2
-                style={{
-                  fontSize: "28px",
-                  fontFamily: "Georgia, serif",
-                  color: "#8f0d25",
-                  marginBottom: "10px",
-                  fontWeight: 500,
-                }}
-              >
-                No saved recipes yet
-              </h2>
-
-              <p
-                style={{
-                  color: "#8a5c52",
-                  lineHeight: "1.7",
-                  marginBottom: "22px",
-                }}
-              >
-                ยังไม่มีสูตรอาหารที่บันทึกไว้ ลองไปค้นหาเมนูน่าทำแล้วกด Save Recipe ได้เลย
-              </p>
-
-              <a
-                href="/search"
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  padding: "13px 20px",
-                  borderRadius: "999px",
-                  backgroundColor: "#b90f2f",
-                  color: "white",
-                  textDecoration: "none",
-                  fontWeight: "bold",
-                }}
-              >
-                <ChefHat size={18} />
-                Go to Search
-              </a>
+              <span>
+                {savedRecipes.length}{" "}
+                {savedRecipes.length === 1
+                  ? "Recipe"
+                  : "Recipes"}
+              </span>
             </div>
-          ) : (
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
-                gap: "24px",
-              }}
-            >
-              {savedRecipes.map((recipe) => (
-                <div
-                  key={recipe.id}
-                  style={{
-                    backgroundColor: "#fffaf3",
-                    borderRadius: "24px",
-                    overflow: "hidden",
-                    border: "1px solid #ead7c4",
-                    boxShadow: "0 16px 34px rgba(95, 31, 35, 0.11)",
-                    position: "relative",
-                  }}
-                >
-                  <div
-                    style={{
-                      position: "absolute",
-                      top: "8px",
-                      right: "10px",
-                      zIndex: 2,
-                      color: "white",
-                      fontSize: "34px",
-                      textShadow: "0 2px 10px rgba(0,0,0,0.2)",
-                      pointerEvents: "none",
-                    }}
-                  >
-                    ❦
-                  </div>
+          </div>
+        </section>
 
+        {savedRecipes.length === 0 ? (
+          <section style={emptyStateStyle}>
+            <div style={emptyDecorationTopStyle}>
+              ✧ ❦ ✧
+            </div>
+
+            <div style={emptyIconStyle}>
+              <ChefHat
+                size={50}
+                strokeWidth={1.5}
+              />
+            </div>
+
+            <h2 style={emptyHeadingStyle}>
+              Your recipe collection is empty
+            </h2>
+
+            <p style={emptyDescriptionStyle}>
+              Explore RecipePeeker and save recipes that
+              inspire your next cozy meal.
+            </p>
+
+            <button
+              type="button"
+              onClick={() => router.push("/search")}
+              style={exploreButtonStyle}
+            >
+              <Sparkles size={19} />
+              Explore Recipes
+            </button>
+
+            <div style={emptyDecorationBottomStyle}>
+              ❧ ♡ ❦
+            </div>
+          </section>
+        ) : (
+          <section style={recipeGridStyle}>
+            {savedRecipes.map((recipe) => (
+              <article
+                key={recipe.id}
+                style={recipeCardStyle}
+              >
+                <div style={imageWrapperStyle}>
                   <img
                     src={recipe.thumbnail}
                     alt={recipe.title}
-                    style={{
-                      width: "100%",
-                      height: "170px",
-                      objectFit: "cover",
-                      display: "block",
-                    }}
+                    style={recipeImageStyle}
                   />
 
-                  <div
-                    style={{
-                      padding: "18px",
-                    }}
+                  <div style={imageOverlayStyle} />
+
+                  <span style={categoryBadgeStyle}>
+                    {recipe.channel}
+                  </span>
+
+                  <span style={statusBadgeStyle}>
+                    {getStatusLabel(recipe.status)}
+                  </span>
+                </div>
+
+                <div style={recipeContentStyle}>
+                  <div style={cardDecorationStyle}>
+                    ❦ Saved Recipe
+                  </div>
+
+                  <h2 style={recipeTitleStyle}>
+                    {recipe.title}
+                  </h2>
+
+                  <p style={categoryTextStyle}>
+                    Category:{" "}
+                    <strong>{recipe.channel}</strong>
+                  </p>
+
+                  <label
+                    htmlFor={`status-${recipe.id}`}
+                    style={statusLabelStyle}
                   >
-                    <p
-                      style={{
-                        color: "#b90f2f",
-                        fontSize: "14px",
-                        marginBottom: "8px",
-                        fontWeight: "bold",
-                      }}
-                    >
-                      {recipe.channel}
-                    </p>
+                    Cooking status
+                  </label>
 
-                    <h3
-                      style={{
-                        color: "#8f0d25",
-                        fontSize: "21px",
-                        lineHeight: "1.35",
-                        fontFamily: "Georgia, serif",
-                        fontWeight: 500,
-                        marginBottom: "16px",
-                      }}
-                    >
-                      {recipe.title}
-                    </h3>
-
-                    <label
-                      style={{
-                        display: "block",
-                        color: "#8a5c52",
-                        fontWeight: "bold",
-                        marginBottom: "8px",
-                        fontSize: "14px",
-                      }}
-                    >
-                      Recipe Status
-                    </label>
-
+                  <div style={selectWrapperStyle}>
                     <select
+                      id={`status-${recipe.id}`}
                       value={recipe.status}
                       onChange={(event) =>
                         handleStatusChange(
                           recipe.id,
-                          event.target.value as RecipeStatus
+                          event.target
+                            .value as SavedRecipeStatus,
                         )
                       }
-                      style={{
-                        width: "100%",
-                        padding: "12px 14px",
-                        borderRadius: "16px",
-                        border: "1px solid #ead7c4",
-                        backgroundColor: "#fff7ed",
-                        color: "#5f1f23",
-                        outline: "none",
-                        fontWeight: "600",
-                        marginBottom: "16px",
-                      }}
+                      style={statusSelectStyle}
                     >
-                      {statusOptions.map((status) => (
-                        <option key={status} value={status}>
-                          {statusLabels[status]}
+                      {statusOptions.map((option) => (
+                        <option
+                          key={option.value}
+                          value={option.value}
+                        >
+                          {option.label}
                         </option>
                       ))}
                     </select>
+                  </div>
 
-                    <div
-                      style={{
-                        display: "flex",
-                        gap: "10px",
-                        flexWrap: "wrap",
-                      }}
+                  <div style={cardActionsStyle}>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleViewRecipe(recipe.id)
+                      }
+                      style={viewButtonStyle}
                     >
-                      <a
-                        href={`/trailer/${recipe.id}`}
-                        style={{
-                          flex: 1,
-                          minWidth: "130px",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          gap: "8px",
-                          padding: "12px 16px",
-                          borderRadius: "999px",
-                          backgroundColor: "#b90f2f",
-                          color: "white",
-                          textDecoration: "none",
-                          fontWeight: "bold",
-                        }}
-                      >
-                        <ChefHat size={17} />
-                        View Recipe
-                      </a>
+                      <Eye size={18} />
+                      View Recipe
+                    </button>
 
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveRecipe(recipe.id)}
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          gap: "8px",
-                          padding: "12px 16px",
-                          borderRadius: "999px",
-                          border: "1px solid #d8b9a6",
-                          backgroundColor: "transparent",
-                          color: "#b90f2f",
-                          cursor: "pointer",
-                          fontWeight: "bold",
-                        }}
-                      >
-                        <Trash2 size={17} />
-                        Remove
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleRemoveRecipe(recipe.id)
+                      }
+                      style={removeButtonStyle}
+                      aria-label={`Remove ${recipe.title}`}
+                      title="Remove Recipe"
+                    >
+                      <Trash2 size={18} />
+                    </button>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </section>
+              </article>
+            ))}
+          </section>
+        )}
+      </div>
+
+      <style jsx>{`
+        @media (max-width: 760px) {
+          .saved-heading-row {
+            flex-direction: column;
+            align-items: flex-start;
+          }
+        }
+      `}</style>
     </main>
   );
 }
+
+const pageStyle: React.CSSProperties = {
+  minHeight: "100vh",
+  padding: "42px 24px 80px",
+  color: "#5f1f23",
+  background:
+    "radial-gradient(circle at top left, rgba(255,255,255,0.96), transparent 28%), radial-gradient(circle at bottom right, rgba(217,32,69,0.07), transparent 32%), #fff7ed",
+};
+
+const pageContainerStyle: React.CSSProperties = {
+  width: "100%",
+  maxWidth: "1180px",
+  margin: "0 auto",
+};
+
+const backButtonStyle: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: "8px",
+  marginBottom: "26px",
+  padding: "11px 17px",
+  border: "1px solid #ead7c4",
+  borderRadius: "999px",
+  color: "#8f0d25",
+  backgroundColor: "#fffaf3",
+  boxShadow: "0 8px 20px rgba(95,31,35,0.08)",
+  cursor: "pointer",
+  fontSize: "14px",
+  fontWeight: "700",
+};
+
+const headingSectionStyle: React.CSSProperties = {
+  marginBottom: "32px",
+  padding: "30px 34px",
+  border: "1px solid #ead7c4",
+  borderRadius: "28px",
+  backgroundColor: "#fffaf3",
+  boxShadow: "0 18px 46px rgba(95,31,35,0.09)",
+};
+
+const headingDecorationStyle: React.CSSProperties = {
+  marginBottom: "10px",
+  color: "#b90f2f",
+  fontFamily: "Georgia, serif",
+  fontSize: "14px",
+  letterSpacing: "1.3px",
+};
+
+const headingRowStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "flex-end",
+  justifyContent: "space-between",
+  flexWrap: "wrap",
+  gap: "22px",
+};
+
+const pageHeadingStyle: React.CSSProperties = {
+  margin: "0 0 10px",
+  color: "#8f0d25",
+  fontFamily: "Georgia, serif",
+  fontSize: "clamp(38px, 5vw, 56px)",
+  lineHeight: "1.1",
+};
+
+const pageDescriptionStyle: React.CSSProperties = {
+  maxWidth: "650px",
+  margin: 0,
+  color: "#8a5c52",
+  fontSize: "16px",
+  lineHeight: "1.75",
+};
+
+const recipeCountStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: "9px",
+  padding: "12px 18px",
+  border: "1px solid #ead7c4",
+  borderRadius: "999px",
+  color: "#8f0d25",
+  backgroundColor: "#f9eadf",
+  fontSize: "14px",
+  fontWeight: "700",
+};
+
+const recipeGridStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns:
+    "repeat(auto-fit, minmax(280px, 1fr))",
+  gap: "25px",
+};
+
+const recipeCardStyle: React.CSSProperties = {
+  overflow: "hidden",
+  border: "1px solid #ead7c4",
+  borderRadius: "26px",
+  backgroundColor: "#fffaf3",
+  boxShadow: "0 17px 44px rgba(95,31,35,0.1)",
+};
+
+const imageWrapperStyle: React.CSSProperties = {
+  position: "relative",
+  height: "245px",
+  overflow: "hidden",
+};
+
+const recipeImageStyle: React.CSSProperties = {
+  width: "100%",
+  height: "100%",
+  display: "block",
+  objectFit: "cover",
+};
+
+const imageOverlayStyle: React.CSSProperties = {
+  position: "absolute",
+  inset: 0,
+  pointerEvents: "none",
+  background:
+    "linear-gradient(180deg, rgba(95,31,35,0.04), rgba(95,31,35,0.34))",
+};
+
+const categoryBadgeStyle: React.CSSProperties = {
+  position: "absolute",
+  top: "17px",
+  left: "17px",
+  padding: "8px 13px",
+  border: "1px solid rgba(255,255,255,0.76)",
+  borderRadius: "999px",
+  color: "#8f0d25",
+  backgroundColor: "rgba(255,250,243,0.94)",
+  boxShadow: "0 7px 18px rgba(95,31,35,0.14)",
+  fontSize: "12px",
+  fontWeight: "700",
+};
+
+const statusBadgeStyle: React.CSSProperties = {
+  position: "absolute",
+  right: "17px",
+  bottom: "17px",
+  padding: "8px 13px",
+  border: "1px solid rgba(255,255,255,0.68)",
+  borderRadius: "999px",
+  color: "white",
+  backgroundColor: "rgba(185,15,47,0.9)",
+  boxShadow: "0 7px 18px rgba(95,31,35,0.2)",
+  fontSize: "12px",
+  fontWeight: "700",
+};
+
+const recipeContentStyle: React.CSSProperties = {
+  padding: "24px",
+};
+
+const cardDecorationStyle: React.CSSProperties = {
+  marginBottom: "7px",
+  color: "#b90f2f",
+  fontFamily: "Georgia, serif",
+  fontSize: "12px",
+  letterSpacing: "0.7px",
+};
+
+const recipeTitleStyle: React.CSSProperties = {
+  margin: "0 0 10px",
+  color: "#8f0d25",
+  fontFamily: "Georgia, serif",
+  fontSize: "25px",
+  lineHeight: "1.25",
+};
+
+const categoryTextStyle: React.CSSProperties = {
+  margin: "0 0 21px",
+  color: "#8a5c52",
+  fontSize: "14px",
+};
+
+const statusLabelStyle: React.CSSProperties = {
+  display: "block",
+  marginBottom: "8px",
+  color: "#5f1f23",
+  fontSize: "13px",
+  fontWeight: "700",
+};
+
+const selectWrapperStyle: React.CSSProperties = {
+  position: "relative",
+};
+
+const statusSelectStyle: React.CSSProperties = {
+  width: "100%",
+  boxSizing: "border-box",
+  padding: "13px 14px",
+  border: "1px solid #ead7c4",
+  borderRadius: "13px",
+  color: "#5f1f23",
+  backgroundColor: "#fffdf9",
+  cursor: "pointer",
+  fontFamily: "inherit",
+  fontSize: "14px",
+  outline: "none",
+};
+
+const cardActionsStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "1fr auto",
+  gap: "10px",
+  marginTop: "20px",
+};
+
+const viewButtonStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: "8px",
+  padding: "13px 17px",
+  border: "none",
+  borderRadius: "13px",
+  color: "white",
+  backgroundColor: "#b90f2f",
+  boxShadow: "0 10px 22px rgba(185,15,47,0.2)",
+  cursor: "pointer",
+  fontWeight: "700",
+};
+
+const removeButtonStyle: React.CSSProperties = {
+  width: "46px",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  border: "1px solid #efc6ca",
+  borderRadius: "13px",
+  color: "#b90f2f",
+  backgroundColor: "#fff0f2",
+  cursor: "pointer",
+};
+
+const emptyStateStyle: React.CSSProperties = {
+  position: "relative",
+  overflow: "hidden",
+  padding: "75px 25px",
+  border: "1px solid #ead7c4",
+  borderRadius: "30px",
+  textAlign: "center",
+  backgroundColor: "#fffaf3",
+  boxShadow: "0 18px 48px rgba(95,31,35,0.09)",
+};
+
+const emptyDecorationTopStyle: React.CSSProperties = {
+  position: "absolute",
+  top: "25px",
+  left: 0,
+  right: 0,
+  color: "#d92045",
+  fontFamily: "Georgia, serif",
+  fontSize: "18px",
+  letterSpacing: "8px",
+};
+
+const emptyIconStyle: React.CSSProperties = {
+  width: "100px",
+  height: "100px",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  margin: "0 auto 23px",
+  borderRadius: "30px",
+  color: "white",
+  background:
+    "linear-gradient(135deg, #b90f2f, #d92045)",
+  boxShadow: "0 18px 35px rgba(185,15,47,0.22)",
+};
+
+const emptyHeadingStyle: React.CSSProperties = {
+  margin: "0 0 12px",
+  color: "#8f0d25",
+  fontFamily: "Georgia, serif",
+  fontSize: "31px",
+};
+
+const emptyDescriptionStyle: React.CSSProperties = {
+  maxWidth: "510px",
+  margin: "0 auto 27px",
+  color: "#8a5c52",
+  lineHeight: "1.75",
+};
+
+const exploreButtonStyle: React.CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: "9px",
+  padding: "14px 21px",
+  border: "none",
+  borderRadius: "14px",
+  color: "white",
+  backgroundColor: "#b90f2f",
+  boxShadow: "0 12px 26px rgba(185,15,47,0.22)",
+  cursor: "pointer",
+  fontWeight: "700",
+};
+
+const emptyDecorationBottomStyle: React.CSSProperties = {
+  position: "absolute",
+  right: 0,
+  bottom: "23px",
+  left: 0,
+  color: "rgba(185,15,47,0.38)",
+  fontFamily: "Georgia, serif",
+  letterSpacing: "7px",
+};
+
+const loadingPageStyle: React.CSSProperties = {
+  minHeight: "100vh",
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: "15px",
+  color: "#8f0d25",
+  backgroundColor: "#fff7ed",
+};
+
+const loadingIconStyle: React.CSSProperties = {
+  width: "82px",
+  height: "82px",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  border: "1px solid #ead7c4",
+  borderRadius: "25px",
+  color: "white",
+  backgroundColor: "#b90f2f",
+  boxShadow: "0 15px 32px rgba(185,15,47,0.2)",
+};
+
+const loadingTextStyle: React.CSSProperties = {
+  margin: 0,
+  color: "#8a5c52",
+  fontFamily: "Georgia, serif",
+  fontSize: "17px",
+};

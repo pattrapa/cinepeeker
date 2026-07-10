@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { signIn } from "next-auth/react";
 import {
   CookingPot,
   Heart,
@@ -20,6 +21,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
 
   const [message, setMessage] = useState("");
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
   const [errors, setErrors] = useState({
     email: false,
@@ -47,7 +49,10 @@ export default function LoginPage() {
     const correctEmail = "user@example.com";
     const correctPassword = "123456";
 
-    if (trimmedEmail !== correctEmail || trimmedPassword !== correctPassword) {
+    if (
+      trimmedEmail !== correctEmail ||
+      trimmedPassword !== correctPassword
+    ) {
       setErrors({
         email: true,
         password: true,
@@ -63,12 +68,33 @@ export default function LoginPage() {
     });
 
     localStorage.setItem("isLoggedIn", "true");
+    localStorage.setItem("loginMethod", "mock");
 
-    setMessage("Login successful! Welcome back to RecipePeeker.");
+    setMessage(
+      "Login successful! Welcome back to RecipePeeker."
+    );
 
     setTimeout(() => {
       router.push(redirectPath);
     }, 800);
+  };
+
+  const handleGoogleLogin = async () => {
+    try {
+      setIsGoogleLoading(true);
+      setMessage("");
+
+      await signIn("google", {
+        redirectTo: redirectPath,
+      });
+    } catch (error) {
+      console.error("Google login error:", error);
+
+      setIsGoogleLoading(false);
+      setMessage(
+        "Unable to login with Google. Please try again."
+      );
+    }
   };
 
   const registerHref =
@@ -83,15 +109,47 @@ export default function LoginPage() {
       <section className="authContainer">
         {/* Login form */}
         <div className="formSection">
-          <div style={{ marginBottom: "30px" }}>
-            <span style={smallDecorationStyle}>❦ Welcome back ❦</span>
+          <div style={{ marginBottom: "28px" }}>
+            <span style={smallDecorationStyle}>
+              ❦ Welcome back ❦
+            </span>
 
             <h1 style={headingStyle}>Login</h1>
 
             <p style={descriptionStyle}>
-              Login to save your favorite recipes and continue your cozy
-              cooking journey.
+              Login to save your favorite recipes and continue
+              your cozy cooking journey.
             </p>
+          </div>
+
+          {/* Google Login */}
+          <button
+            type="button"
+            onClick={handleGoogleLogin}
+            disabled={isGoogleLoading}
+            style={{
+              ...googleButtonStyle,
+              cursor: isGoogleLoading
+                ? "not-allowed"
+                : "pointer",
+              opacity: isGoogleLoading ? 0.7 : 1,
+            }}
+          >
+            <GoogleIcon />
+
+            <span>
+              {isGoogleLoading
+                ? "Connecting to Google..."
+                : "Continue with Google"}
+            </span>
+          </button>
+
+          <div style={dividerContainerStyle}>
+            <span style={dividerLineStyle} />
+
+            <span style={dividerTextStyle}>or</span>
+
+            <span style={dividerLineStyle} />
           </div>
 
           <div style={demoAccountStyle}>
@@ -109,7 +167,8 @@ export default function LoginPage() {
               </div>
 
               <div style={{ color: "#8a5c52" }}>
-                <strong>user@example.com</strong> / <strong>123456</strong>
+                <strong>user@example.com</strong> /{" "}
+                <strong>123456</strong>
               </div>
             </div>
           </div>
@@ -120,7 +179,9 @@ export default function LoginPage() {
             <div style={inputWrapperStyle}>
               <Mail
                 size={19}
-                color={errors.email ? "#d92045" : "#9a6b5f"}
+                color={
+                  errors.email ? "#d92045" : "#9a6b5f"
+                }
                 style={inputIconStyle}
               />
 
@@ -130,6 +191,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={(event) => {
                   setEmail(event.target.value);
+                  setMessage("");
 
                   setErrors((previousErrors) => ({
                     ...previousErrors,
@@ -157,7 +219,11 @@ export default function LoginPage() {
             <div style={inputWrapperStyle}>
               <LockKeyhole
                 size={19}
-                color={errors.password ? "#d92045" : "#9a6b5f"}
+                color={
+                  errors.password
+                    ? "#d92045"
+                    : "#9a6b5f"
+                }
                 style={inputIconStyle}
               />
 
@@ -167,6 +233,7 @@ export default function LoginPage() {
                 value={password}
                 onChange={(event) => {
                   setPassword(event.target.value);
+                  setMessage("");
 
                   setErrors((previousErrors) => ({
                     ...previousErrors,
@@ -186,12 +253,18 @@ export default function LoginPage() {
               type="submit"
               style={primaryButtonStyle}
               onMouseEnter={(event) => {
-                event.currentTarget.style.backgroundColor = "#8f0d25";
-                event.currentTarget.style.transform = "translateY(-1px)";
+                event.currentTarget.style.backgroundColor =
+                  "#8f0d25";
+
+                event.currentTarget.style.transform =
+                  "translateY(-1px)";
               }}
               onMouseLeave={(event) => {
-                event.currentTarget.style.backgroundColor = "#b90f2f";
-                event.currentTarget.style.transform = "translateY(0)";
+                event.currentTarget.style.backgroundColor =
+                  "#b90f2f";
+
+                event.currentTarget.style.transform =
+                  "translateY(0)";
               }}
             >
               Login
@@ -201,8 +274,12 @@ export default function LoginPage() {
               <p
                 style={{
                   ...messageStyle,
-                  color: isSuccess ? "#3f7b50" : "#b90f2f",
-                  backgroundColor: isSuccess ? "#edf7ee" : "#fff0f2",
+                  color: isSuccess
+                    ? "#3f7b50"
+                    : "#b90f2f",
+                  backgroundColor: isSuccess
+                    ? "#edf7ee"
+                    : "#fff0f2",
                   border: isSuccess
                     ? "1px solid #cce6d1"
                     : "1px solid #f1c4cb",
@@ -221,7 +298,7 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {/* Decorative RecipePeeker panel */}
+        {/* Decorative panel */}
         <div className="visualSection">
           <div style={topSymbolStyle}>✧ ❦ ✧</div>
 
@@ -229,16 +306,18 @@ export default function LoginPage() {
             <CookingPot size={62} strokeWidth={1.5} />
           </div>
 
-          <h2 style={visualHeadingStyle}>RecipePeeker</h2>
+          <h2 style={visualHeadingStyle}>
+            RecipePeeker
+          </h2>
 
           <p style={visualTextStyle}>
-            Discover recipes made for sweet mornings, cozy evenings and
-            memorable meals.
+            Discover recipes made for sweet mornings, cozy
+            evenings and memorable meals.
           </p>
 
           <div style={featureListStyle}>
             <div style={featureItemStyle}>
-              <Heart size={18} fill="#b90f2f" />
+              <Heart size={18} />
               Save your favorite recipes
             </div>
 
@@ -277,18 +356,22 @@ export default function LoginPage() {
         .authContainer {
           width: 100%;
           max-width: 1060px;
-          min-height: 650px;
+          min-height: 690px;
           display: grid;
           grid-template-columns: 1fr 0.9fr;
           overflow: hidden;
           border: 1px solid #ead7c4;
           border-radius: 32px;
           background-color: #fffaf3;
-          box-shadow: 0 28px 80px rgba(95, 31, 35, 0.14);
+          box-shadow: 0 28px 80px
+            rgba(95, 31, 35, 0.14);
         }
 
         .formSection {
-          padding: 54px 62px;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          padding: 48px 62px;
           background-color: #fffaf3;
         }
 
@@ -302,16 +385,11 @@ export default function LoginPage() {
           padding: 50px;
           color: white;
           text-align: center;
-          background:
-            linear-gradient(
-              rgba(143, 13, 37, 0.94),
-              rgba(185, 15, 47, 0.92)
-            ),
-            radial-gradient(
-              circle at top,
-              rgba(255, 255, 255, 0.3),
-              transparent 35%
-            );
+          background: linear-gradient(
+            145deg,
+            #8f0d25,
+            #c71438
+          );
         }
 
         .visualSection::before,
@@ -320,7 +398,8 @@ export default function LoginPage() {
           position: absolute;
           width: 180px;
           height: 180px;
-          border: 2px solid rgba(255, 255, 255, 0.16);
+          border: 2px solid
+            rgba(255, 255, 255, 0.16);
           border-radius: 50%;
         }
 
@@ -349,7 +428,7 @@ export default function LoginPage() {
           }
 
           .visualSection {
-            min-height: 420px;
+            min-height: 400px;
             padding: 48px 30px;
           }
         }
@@ -368,11 +447,42 @@ export default function LoginPage() {
           }
 
           .visualSection {
-            min-height: 390px;
+            min-height: 360px;
           }
         }
       `}</style>
     </main>
+  );
+}
+
+function GoogleIcon() {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+    >
+      <path
+        fill="#4285F4"
+        d="M21.6 12.23c0-.71-.06-1.4-.18-2.07H12v3.91h5.38a4.6 4.6 0 0 1-2 3.02v2.54h3.24c1.9-1.75 2.98-4.33 2.98-7.4Z"
+      />
+
+      <path
+        fill="#34A853"
+        d="M12 22c2.7 0 4.97-.9 6.62-2.43l-3.24-2.54c-.9.6-2.05.96-3.38.96-2.61 0-4.82-1.76-5.61-4.13H3.04v2.62A10 10 0 0 0 12 22Z"
+      />
+
+      <path
+        fill="#FBBC05"
+        d="M6.39 13.86A6.02 6.02 0 0 1 6.08 12c0-.65.11-1.28.31-1.86V7.52H3.04A10 10 0 0 0 2 12c0 1.61.39 3.14 1.04 4.48l3.35-2.62Z"
+      />
+
+      <path
+        fill="#EA4335"
+        d="M12 6.01c1.47 0 2.78.5 3.82 1.49l2.86-2.86A9.59 9.59 0 0 0 12 2a10 10 0 0 0-8.96 5.52l3.35 2.62C7.18 7.77 9.39 6.01 12 6.01Z"
+      />
+    </svg>
   );
 }
 
@@ -401,12 +511,49 @@ const descriptionStyle: React.CSSProperties = {
   lineHeight: "1.75",
 };
 
+const googleButtonStyle: React.CSSProperties = {
+  width: "100%",
+  boxSizing: "border-box",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: "11px",
+  padding: "14px 18px",
+  border: "1px solid #ead7c4",
+  borderRadius: "14px",
+  color: "#5f1f23",
+  backgroundColor: "#fffdf9",
+  boxShadow: "0 7px 18px rgba(95, 31, 35, 0.07)",
+  fontSize: "15px",
+  fontWeight: "700",
+  transition:
+    "border-color 0.2s ease, transform 0.2s ease",
+};
+
+const dividerContainerStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: "13px",
+  margin: "20px 0",
+};
+
+const dividerLineStyle: React.CSSProperties = {
+  height: "1px",
+  flex: 1,
+  backgroundColor: "#ead7c4",
+};
+
+const dividerTextStyle: React.CSSProperties = {
+  color: "#9a6b5f",
+  fontSize: "13px",
+};
+
 const demoAccountStyle: React.CSSProperties = {
   display: "flex",
   alignItems: "flex-start",
   gap: "11px",
-  marginBottom: "26px",
-  padding: "14px 16px",
+  marginBottom: "24px",
+  padding: "13px 15px",
   border: "1px solid #ead7c4",
   borderRadius: "15px",
   backgroundColor: "#f9eadf",
@@ -444,7 +591,6 @@ const inputStyle: React.CSSProperties = {
   color: "#5f1f23",
   fontSize: "15px",
   outline: "none",
-  transition: "border-color 0.2s ease, box-shadow 0.2s ease",
 };
 
 const primaryButtonStyle: React.CSSProperties = {
@@ -459,7 +605,8 @@ const primaryButtonStyle: React.CSSProperties = {
   cursor: "pointer",
   fontSize: "16px",
   fontWeight: "700",
-  transition: "background-color 0.2s ease, transform 0.2s ease",
+  transition:
+    "background-color 0.2s ease, transform 0.2s ease",
 };
 
 const messageStyle: React.CSSProperties = {
@@ -473,7 +620,7 @@ const messageStyle: React.CSSProperties = {
 };
 
 const bottomTextStyle: React.CSSProperties = {
-  marginTop: "24px",
+  marginTop: "22px",
   marginBottom: 0,
   color: "#8a5c52",
   textAlign: "center",
@@ -505,8 +652,7 @@ const largeIconContainerStyle: React.CSSProperties = {
   border: "1px solid rgba(255,255,255,0.55)",
   borderRadius: "34px",
   backgroundColor: "rgba(255,255,255,0.12)",
-  boxShadow: "0 22px 45px rgba(95, 31, 35, 0.22)",
-  backdropFilter: "blur(8px)",
+  boxShadow: "0 22px 45px rgba(95,31,35,0.22)",
 };
 
 const visualHeadingStyle: React.CSSProperties = {
@@ -527,7 +673,6 @@ const featureListStyle: React.CSSProperties = {
   display: "flex",
   flexDirection: "column",
   gap: "12px",
-  marginBottom: "30px",
 };
 
 const featureItemStyle: React.CSSProperties = {
