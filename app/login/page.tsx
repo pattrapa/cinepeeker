@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
+import Image from "next/image";
 import {
-  CookingPot,
   Heart,
   LockKeyhole,
   Mail,
@@ -103,6 +103,11 @@ export default function LoginPage() {
       : `/register?redirect=${encodeURIComponent(redirectPath)}`;
 
   const isSuccess = message.includes("successful");
+  const logoImageStyle: React.CSSProperties = {
+    width: "76px",
+    height: "76px",
+    objectFit: "contain",
+  };
 
   return (
     <main className="page">
@@ -303,7 +308,14 @@ export default function LoginPage() {
           <div style={topSymbolStyle}>✧ ❦ ✧</div>
 
           <div style={largeIconContainerStyle}>
-            <CookingPot size={62} strokeWidth={1.5} />
+            <Image
+              src="/cook2.png"
+              alt="RecipePeeker logo"
+              width={76}
+              height={76}
+              priority
+              style={logoImageStyle}
+            />
           </div>
 
           <h2 style={visualHeadingStyle}>

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Image from "next/image";
 import {
   CookingPot,
   Heart,
@@ -71,6 +72,11 @@ export default function RegisterPage() {
       : `/login?redirect=${encodeURIComponent(redirectPath)}`;
 
   const isSuccess = message.includes("successfully");
+  const logoImageStyle: React.CSSProperties = {
+  width: "76px",
+  height: "76px",
+  objectFit: "contain",
+};
 
   return (
     <main className="page">
@@ -78,9 +84,16 @@ export default function RegisterPage() {
         {/* Decorative RecipePeeker panel */}
         <div className="visualSection">
           <div style={topSymbolStyle}>✧ ❦ ✧</div>
-
+  
           <div style={largeIconContainerStyle}>
-            <CookingPot size={62} strokeWidth={1.5} />
+            <Image
+              src="/cook2.png"
+              alt="RecipePeeker logo"
+              width={76}
+              height={76}
+              priority
+              style={logoImageStyle}
+            />
           </div>
 
           <h2 style={visualHeadingStyle}>RecipePeeker</h2>
@@ -104,7 +117,7 @@ export default function RegisterPage() {
 
           <div style={bottomSymbolStyle}>❧ ♡ ❦</div>
         </div>
-
+  
         {/* Register form */}
         <div className="formSection">
           <div style={{ marginBottom: "28px" }}>
@@ -127,7 +140,7 @@ export default function RegisterPage() {
                 color={errors.username ? "#d92045" : "#9a6b5f"}
                 style={inputIconStyle}
               />
-
+  
               <input
                 type="text"
                 placeholder="Your username"
@@ -505,8 +518,7 @@ const largeIconContainerStyle: React.CSSProperties = {
   border: "1px solid rgba(255,255,255,0.55)",
   borderRadius: "34px",
   backgroundColor: "rgba(255,255,255,0.12)",
-  boxShadow: "0 22px 45px rgba(95, 31, 35, 0.22)",
-  backdropFilter: "blur(8px)",
+  boxShadow: "0 22px 45px rgba(95,31,35,0.22)",
 };
 
 const visualHeadingStyle: React.CSSProperties = {

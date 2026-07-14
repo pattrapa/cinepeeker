@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
   ArrowLeft,
@@ -213,7 +213,6 @@ const recipes: Recipe[] = [
 export default function RecipeDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   const { data: session, status: sessionStatus } = useSession();
 
@@ -241,8 +240,6 @@ export default function RecipeDetailPage() {
   const isLoggedIn =
     isMockLoggedIn || isGoogleLoggedIn;
 
-  const saveAfterLogin =
-    searchParams.get("save") === "1";
 
   useEffect(() => {
     const mockLoginStatus =
@@ -313,30 +310,6 @@ export default function RecipeDetailPage() {
     setIsPageReady(true);
   }, [recipe]);
 
-  useEffect(() => {
-    if (!recipe || !isPageReady) {
-      return;
-    }
-
-    if (sessionStatus === "loading") {
-      return;
-    }
-
-    if (!saveAfterLogin || !isLoggedIn) {
-      return;
-    }
-
-    saveRecipeToLocalStorage(recipe);
-
-    router.replace(`/trailer/${recipe.id}`);
-  }, [
-    recipe,
-    isPageReady,
-    sessionStatus,
-    saveAfterLogin,
-    isLoggedIn,
-    router,
-  ]);
 
   const saveRecipeToLocalStorage = (
     selectedRecipe: Recipe,
@@ -389,12 +362,8 @@ export default function RecipeDetailPage() {
     }
 
     if (!isLoggedIn) {
-      const returnPath = `/trailer/${recipe.id}?save=1`;
-
       router.push(
-        `/login?redirect=${encodeURIComponent(
-          returnPath,
-        )}`,
+        `/login?redirect=/trailer/${recipe.id}`,
       );
 
       return;
@@ -443,9 +412,7 @@ export default function RecipeDetailPage() {
 
     if (!isLoggedIn) {
       router.push(
-        `/login?redirect=${encodeURIComponent(
-          `/trailer/${recipe.id}`,
-        )}`,
+        `/login?redirect=/trailer/${recipe.id}`,
       );
 
       return;
@@ -566,11 +533,11 @@ export default function RecipeDetailPage() {
       <div style={pageContainerStyle}>
         <button
           type="button"
-          onClick={() => router.back()}
+          onClick={() => router.push("/")}
           style={backButtonStyle}
         >
           <ArrowLeft size={18} />
-          Back
+          Back to Recipes
         </button>
 
         <section style={heroCardStyle}>
@@ -666,7 +633,6 @@ export default function RecipeDetailPage() {
               <button
                 type="button"
                 onClick={handleSaveRecipe}
-                disabled={status === "loading"}
                 style={saveRecipeButtonStyle}
               >
                 <Heart size={20} />

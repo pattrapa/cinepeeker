@@ -145,7 +145,6 @@ export default function Home() {
               pointerEvents: "none",
             }}
           >
-            ❦
           </div>
 
           <div
@@ -160,7 +159,7 @@ export default function Home() {
               style={{
                 display: "inline-flex",
                 alignItems: "center",
-                gap: "8px",
+                gap: "px",
                 padding: "8px 14px",
                 borderRadius: "999px",
                 border: "1px solid #f1c9bd",
@@ -221,14 +220,14 @@ export default function Home() {
                 marginBottom: "24px",
               }}
             >
-              <a href="/search" style={primaryButtonStyle}>
+              <a href="/trailer/1" style={primaryButtonStyle}>
                 <ChefHat size={18} />
                 View Recipe
               </a>
 
               <a href="/watchlist" style={secondaryButtonStyle}>
                 <Heart size={18} />
-                Save Recipe
+                Saved Recipes
               </a>
             </div>
 

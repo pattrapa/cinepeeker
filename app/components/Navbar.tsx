@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import {
@@ -9,7 +10,6 @@ import {
   Heart,
   User,
   LogOut,
-  CookingPot,
   Menu,
   X,
 } from "lucide-react";
@@ -25,35 +25,35 @@ export default function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
-  const loginStatus = localStorage.getItem("isLoggedIn");
-  setIsMockLoggedIn(loginStatus === "true");
-}, []);
+    const loginStatus = localStorage.getItem("isLoggedIn");
+    setIsMockLoggedIn(loginStatus === "true");
+  }, []);
 
   const isLoggedIn =
-  isMockLoggedIn || status === "authenticated";
+    isMockLoggedIn || status === "authenticated";
 
   useEffect(() => {
     setIsMobileMenuOpen(false);
   }, [pathname]);
 
   const handleConfirmLogout = async () => {
-  localStorage.removeItem("isLoggedIn");
-  localStorage.removeItem("loginMethod");
-  localStorage.removeItem("mockUser");
+    localStorage.removeItem("isLoggedIn");
+    localStorage.removeItem("loginMethod");
+    localStorage.removeItem("mockUser");
 
-  setIsMockLoggedIn(false);
-  setShowLogoutPopup(false);
-  setIsMobileMenuOpen(false);
+    setIsMockLoggedIn(false);
+    setShowLogoutPopup(false);
+    setIsMobileMenuOpen(false);
 
-  if (session) {
-    await signOut({
-      redirect: false,
-    });
-  }
+    if (session) {
+      await signOut({
+        redirect: false,
+      });
+    }
 
-  router.push("/");
-  router.refresh();
-};
+    router.push("/");
+    router.refresh();
+  };
 
   const handleLogoutClick = () => {
     setIsMobileMenuOpen(false);
@@ -73,7 +73,14 @@ export default function Navbar() {
       <nav className="navbar">
         <a href="/" className="brand">
           <span className="brandIcon">
-            <CookingPot size={25} />
+            <Image
+              src="/cook.png"
+              alt="RecipePeeker logo"
+              width={32}
+              height={34}
+              className="brandLogo"
+              priority
+            />
           </span>
 
           <span className="brandText">
@@ -93,9 +100,8 @@ export default function Navbar() {
 
           <a
             href="/search"
-            className={`navLink ${
-              isActive("/search") ? "activeLink" : ""
-            }`}
+            className={`navLink ${isActive("/search") ? "activeLink" : ""
+              }`}
           >
             <Search size={18} />
             Search
@@ -103,9 +109,8 @@ export default function Navbar() {
 
           <a
             href="/watchlist"
-            className={`navLink ${
-              isActive("/watchlist") ? "activeLink" : ""
-            }`}
+            className={`navLink ${isActive("/watchlist") ? "activeLink" : ""
+              }`}
           >
             <Heart size={18} />
             Saved Recipes
@@ -144,9 +149,8 @@ export default function Navbar() {
           <div className="mobileMenu">
             <a
               href="/"
-              className={`mobileNavLink ${
-                isActive("/") ? "activeMobileLink" : ""
-              }`}
+              className={`mobileNavLink ${isActive("/") ? "activeMobileLink" : ""
+                }`}
             >
               <HomeIcon size={19} />
               Home
@@ -154,9 +158,8 @@ export default function Navbar() {
 
             <a
               href="/search"
-              className={`mobileNavLink ${
-                isActive("/search") ? "activeMobileLink" : ""
-              }`}
+              className={`mobileNavLink ${isActive("/search") ? "activeMobileLink" : ""
+                }`}
             >
               <Search size={19} />
               Search
@@ -164,9 +167,8 @@ export default function Navbar() {
 
             <a
               href="/watchlist"
-              className={`mobileNavLink ${
-                isActive("/watchlist") ? "activeMobileLink" : ""
-              }`}
+              className={`mobileNavLink ${isActive("/watchlist") ? "activeMobileLink" : ""
+                }`}
             >
               <Heart size={19} />
               Saved Recipes
@@ -186,9 +188,8 @@ export default function Navbar() {
             ) : (
               <a
                 href="/login"
-                className={`mobileNavLink mobileAccountButton ${
-                  isActive("/login") ? "activeMobileLink" : ""
-                }`}
+                className={`mobileNavLink mobileAccountButton ${isActive("/login") ? "activeMobileLink" : ""
+                  }`}
               >
                 <User size={19} />
                 Login
@@ -259,16 +260,24 @@ export default function Navbar() {
         }
 
         .brandIcon {
-          width: 48px;
-          height: 48px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          border-radius: 50%;
-          color: white;
-          background: linear-gradient(135deg, #b90f2f, #d92045);
-          box-shadow: 0 10px 24px rgba(185, 15, 47, 0.25);
-        }
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+  border: 1px solid #ead7c4;
+  border-radius: 50%;
+  background-color: #fffaf3;
+  box-shadow: 0 10px 24px rgba(185, 15, 47, 0.16);
+}
+
+.brandLogo {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+}
 
         .brandText {
           font-family: Georgia, serif;

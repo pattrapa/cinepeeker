@@ -30,19 +30,19 @@ const statusOptions: {
   value: SavedRecipeStatus;
   label: string;
 }[] = [
-  {
-    value: "Want to Watch",
-    label: "Want to Cook",
-  },
-  {
-    value: "Watched",
-    label: "Cooked",
-  },
-  {
-    value: "Favorite",
-    label: "Favorite",
-  },
-];
+    {
+      value: "Want to Watch",
+      label: "Want to Cook",
+    },
+    {
+      value: "Watched",
+      label: "Cooked",
+    },
+    {
+      value: "Favorite",
+      label: "Favorite",
+    },
+  ];
 
 export default function WatchlistPage() {
   const router = useRouter();
@@ -188,9 +188,9 @@ export default function WatchlistPage() {
       (recipe) =>
         Number(recipe.id) === Number(recipeId)
           ? {
-              ...recipe,
-              status: newStatus,
-            }
+            ...recipe,
+            status: newStatus,
+          }
           : recipe,
     );
 
@@ -283,7 +283,10 @@ export default function WatchlistPage() {
             ❦ Your personal collection ❦
           </div>
 
-          <div style={headingRowStyle}>
+          <div
+            className="saved-heading-row"
+            style={headingRowStyle}
+          >
             <div>
               <h1 style={pageHeadingStyle}>
                 Saved Recipes
@@ -547,7 +550,7 @@ const recipeCountStyle: React.CSSProperties = {
 const recipeGridStyle: React.CSSProperties = {
   display: "grid",
   gridTemplateColumns:
-    "repeat(auto-fit, minmax(280px, 1fr))",
+    "repeat(auto-fit, minmax(min(280px, 100%), 1fr))",
   gap: "25px",
 };
 
