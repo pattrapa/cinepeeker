@@ -1,14 +1,12 @@
-import type {
-  Request,
-  Response,
-} from "express";
+import type { Request, Response } from "express";
 import mongoose from "mongoose";
 
 import RecipeModel, {
   type IRecipe,
+  type RecipeDifficulty,
 } from "../models/Recipe";
 
-type CreateRecipeBody = Partial<IRecipe>;
+type CreateRecipeBody = Record<string, unknown>;
 type RecipeParams = {
   id: string;
 };
@@ -57,11 +55,7 @@ export async function getRecipeById(
 }
 
 export async function updateRecipe(
-  request: Request<
-    RecipeParams,
-    unknown,
-    UpdateRecipeBody
-  >,
+  request: Request<RecipeParams, unknown, UpdateRecipeBody>,
   response: Response,
 ): Promise<void> {
   try {
@@ -100,8 +94,7 @@ export async function updateRecipe(
     }
 
     if (typeof body.description === "string") {
-      updateData.description =
-        body.description.trim();
+      updateData.description = body.description.trim();
     }
 
     if (typeof body.imageUrl === "string") {
@@ -109,20 +102,15 @@ export async function updateRecipe(
     }
 
     if (body.ingredients !== undefined) {
-      updateData.ingredients = cleanStringArray(
-        body.ingredients,
-      );
+      updateData.ingredients = cleanStringArray(body.ingredients);
     }
 
     if (body.steps !== undefined) {
-      updateData.steps = cleanStringArray(
-        body.steps,
-      );
+      updateData.steps = cleanStringArray(body.steps);
     }
 
     if (typeof body.authorName === "string") {
-      updateData.authorName =
-        body.authorName.trim();
+      updateData.authorName = body.authorName.trim();
     }
 
     if (Object.keys(updateData).length === 0) {
@@ -134,15 +122,10 @@ export async function updateRecipe(
       return;
     }
 
-    const updatedRecipe =
-      await RecipeModel.findByIdAndUpdate(
-        id,
-        updateData,
-        {
-          returnDocument: "after",
-          runValidators: true,
-        },
-      );
+    const updatedRecipe = await RecipeModel.findByIdAndUpdate(id, updateData, {
+      returnDocument: "after",
+      runValidators: true,
+    });
 
     if (!updatedRecipe) {
       response.status(404).json({
@@ -161,15 +144,12 @@ export async function updateRecipe(
   } catch (error) {
     console.error("Unable to update recipe:", error);
 
-    if (
-      error instanceof
-      mongoose.Error.ValidationError
-    ) {
-      const validationErrors = Object.values(
-        error.errors,
-      ).map((validationError) => {
-        return validationError.message;
-      });
+    if (error instanceof mongoose.Error.ValidationError) {
+      const validationErrors = Object.values(error.errors).map(
+        (validationError) => {
+          return validationError.message;
+        },
+      );
 
       response.status(400).json({
         success: false,
@@ -203,8 +183,7 @@ export async function deleteRecipe(
       return;
     }
 
-    const deletedRecipe =
-      await RecipeModel.findByIdAndDelete(id);
+    const deletedRecipe = await RecipeModel.findByIdAndDelete(id);
 
     if (!deletedRecipe) {
       response.status(404).json({
@@ -236,12 +215,48 @@ function cleanStringArray(value: unknown): string[] {
   }
 
   return value
-    .filter(
-      (item): item is string =>
-        typeof item === "string",
-    )
+    .filter((item): item is string => typeof item === "string")
     .map((item) => item.trim())
     .filter((item) => item.length > 0);
+}
+
+function parseStringArray(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return cleanStringArray(value);
+  }
+
+  if (typeof value !== "string") {
+    return [];
+  }
+
+  try {
+    const parsedValue: unknown = JSON.parse(value);
+
+    return cleanStringArray(parsedValue);
+  } catch {
+    return value
+      .split(/\r?\n/)
+      .map((item) => item.trim())
+      .filter((item) => item.length > 0);
+  }
+}
+
+function parseNumber(value: unknown): number | undefined {
+  const parsedValue = Number(value);
+
+  if (!Number.isFinite(parsedValue)) {
+    return undefined;
+  }
+
+  return parsedValue;
+}
+
+function parseDifficulty(value: unknown): RecipeDifficulty | undefined {
+  if (value === "Easy" || value === "Medium" || value === "Hard") {
+    return value;
+  }
+
+  return undefined;
 }
 
 export async function getRecipes(
@@ -249,8 +264,7 @@ export async function getRecipes(
   response: Response,
 ): Promise<void> {
   try {
-    const recipes = await RecipeModel.find()
-      .sort({ createdAt: -1 });
+    const recipes = await RecipeModel.find().sort({ createdAt: -1 });
 
     response.status(200).json({
       success: true,
@@ -268,34 +282,47 @@ export async function getRecipes(
 }
 
 export async function createRecipe(
-  request: Request<
-    Record<string, never>,
-    unknown,
-    CreateRecipeBody
-  >,
+  request: Request<Record<string, never>, unknown, CreateRecipeBody>,
   response: Response,
 ): Promise<void> {
   try {
     const body = request.body;
 
+    const host = request.get("host") || "localhost:5000";
+
+    const uploadedImageUrl = request.file
+      ? `${request.protocol}://${host}/uploads/recipes/${request.file.filename}`
+      : typeof body.imageUrl === "string"
+        ? body.imageUrl.trim()
+        : "";
+
     const recipe = await RecipeModel.create({
-      title: body.title?.trim(),
-      category: body.category?.trim(),
-      timeMinutes: body.timeMinutes,
-      difficulty: body.difficulty,
-      servings: body.servings,
-      description: body.description?.trim(),
-      imageUrl: body.imageUrl?.trim(),
+      title: typeof body.title === "string" ? body.title.trim() : undefined,
 
-      ingredients: cleanStringArray(
-        body.ingredients,
-      ),
+      category:
+        typeof body.category === "string" ? body.category.trim() : undefined,
 
-      steps: cleanStringArray(body.steps),
+      timeMinutes: parseNumber(body.timeMinutes),
+
+      difficulty: parseDifficulty(body.difficulty),
+
+      servings: parseNumber(body.servings),
+
+      description:
+        typeof body.description === "string"
+          ? body.description.trim()
+          : undefined,
+
+      imageUrl: uploadedImageUrl,
+
+      ingredients: parseStringArray(body.ingredients),
+
+      steps: parseStringArray(body.steps),
 
       authorName:
-        body.authorName?.trim() ||
-        "RecipePeeker User",
+        typeof body.authorName === "string" && body.authorName.trim()
+          ? body.authorName.trim()
+          : "RecipePeeker User",
     });
 
     response.status(201).json({
@@ -306,15 +333,12 @@ export async function createRecipe(
   } catch (error) {
     console.error("Unable to create recipe:", error);
 
-    if (
-      error instanceof
-      mongoose.Error.ValidationError
-    ) {
-      const validationErrors = Object.values(
-        error.errors,
-      ).map((validationError) => {
-        return validationError.message;
-      });
+    if (error instanceof mongoose.Error.ValidationError) {
+      const validationErrors = Object.values(error.errors).map(
+        (validationError) => {
+          return validationError.message;
+        },
+      );
 
       response.status(400).json({
         success: false,

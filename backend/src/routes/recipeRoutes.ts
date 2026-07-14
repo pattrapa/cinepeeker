@@ -8,10 +8,17 @@ import {
   updateRecipe,
 } from "../controllers/recipeController";
 
+import { uploadRecipeImage } from "../middleware/uploadRecipeImage";
+
 const recipeRouter = Router();
 
 recipeRouter.get("/", getRecipes);
-recipeRouter.post("/", createRecipe);
+
+recipeRouter.post(
+  "/",
+  uploadRecipeImage.single("image"),
+  createRecipe,
+);
 
 recipeRouter.get("/:id", getRecipeById);
 recipeRouter.patch("/:id", updateRecipe);

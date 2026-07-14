@@ -1,5 +1,6 @@
 import cors from "cors";
 import express from "express";
+import path from "node:path";
 
 import { env } from "./config/env";
 import recipeRoutes from "./routes/recipeRoutes";
@@ -19,6 +20,13 @@ app.use(
   express.json({
     limit: "1mb",
   }),
+);
+
+app.use(
+  "/uploads",
+  express.static(
+    path.resolve(process.cwd(), "uploads"),
+  ),
 );
 
 app.get("/api/health", (_request, response) => {

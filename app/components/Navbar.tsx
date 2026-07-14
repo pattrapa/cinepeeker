@@ -12,6 +12,7 @@ import {
   LogOut,
   Menu,
   X,
+  CirclePlus,
 } from "lucide-react";
 
 export default function Navbar() {
@@ -115,6 +116,17 @@ export default function Navbar() {
             <Heart size={18} />
             Saved Recipes
           </a>
+          
+          <a
+            href="/create-recipe"
+            className={`navLink addRecipeLink ${isActive("/create-recipe")
+              ? "activeLink"
+              : ""
+              }`}
+          >
+            <CirclePlus size={18} />
+            Add Recipe
+          </a>
 
           {isLoggedIn ? (
             <button
@@ -173,7 +185,18 @@ export default function Navbar() {
               <Heart size={19} />
               Saved Recipes
             </a>
-
+            
+            <a
+              href="/create-recipe"
+              className={`mobileNavLink ${isActive("/create-recipe")
+                ? "activeMobileLink"
+                : ""
+                }`}
+            >
+              <CirclePlus size={19} />
+              Add Recipe
+            </a>
+            
             <div className="mobileDivider" />
 
             {isLoggedIn ? (
@@ -461,6 +484,19 @@ export default function Navbar() {
           gap: 12px;
         }
 
+        .addRecipeLink {
+  border-color: #b90f2f;
+  color: white;
+  background-color: #b90f2f;
+  box-shadow: 0 9px 22px rgba(185, 15, 47, 0.18);
+}
+
+.addRecipeLink:hover {
+  border-color: #8f0d25;
+  color: white;
+  background-color: #8f0d25;
+}
+  
         @keyframes openMenu {
           from {
             opacity: 0;
