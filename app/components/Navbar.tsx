@@ -12,7 +12,7 @@ import {
   LogOut,
   Menu,
   X,
-  CirclePlus,
+  NotebookPen,
 } from "lucide-react";
 
 export default function Navbar() {
@@ -118,14 +118,14 @@ export default function Navbar() {
           </a>
           
           <a
-            href="/create-recipe"
-            className={`navLink addRecipeLink ${isActive("/create-recipe")
+            href="/my_recipe"
+            className={`navLink addRecipeLink ${isActive("/my_recipe")
               ? "activeLink"
               : ""
               }`}
           >
-            <CirclePlus size={18} />
-            Add Recipe
+            <NotebookPen  size={18} />
+            My Recipes
           </a>
 
           {isLoggedIn ? (
@@ -187,14 +187,14 @@ export default function Navbar() {
             </a>
             
             <a
-              href="/create-recipe"
-              className={`mobileNavLink ${isActive("/create-recipe")
+              href="/my_recipe"
+              className={`mobileNavLink ${isActive("/my_recipe")
                 ? "activeMobileLink"
                 : ""
                 }`}
             >
-              <CirclePlus size={19} />
-              Add Recipe
+              <NotebookPen  size={19} />
+              My Recipes
             </a>
             
             <div className="mobileDivider" />

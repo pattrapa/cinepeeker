@@ -18,8 +18,10 @@ type SavedRecipeStatus =
   | "Watched"
   | "Favorite";
 
+type SavedRecipeId = string | number;
+
 type SavedRecipeItem = {
-  id: number;
+  id: SavedRecipeId;
   title: string;
   channel: string;
   thumbnail: string;
@@ -149,9 +151,54 @@ export default function WatchlistPage() {
         return;
       }
 
-      setSavedRecipes(
-        parsedWatchlist as SavedRecipeItem[],
-      );
+      const normalizedRecipes =
+        parsedWatchlist
+          .filter(
+            (
+              item,
+            ): item is Record<string, unknown> =>
+              typeof item === "object" &&
+              item !== null,
+          )
+          .map((item) => {
+            const savedStatus =
+              item.status === "Watched" ||
+                item.status === "Favorite"
+                ? item.status
+                : "Want to Watch";
+
+            return {
+              id:
+                typeof item.id === "string" ||
+                  typeof item.id === "number"
+                  ? item.id
+                  : "",
+
+              title:
+                typeof item.title === "string"
+                  ? item.title
+                  : "Untitled Recipe",
+
+              channel:
+                typeof item.channel === "string"
+                  ? item.channel
+                  : "Other",
+
+              thumbnail:
+                typeof item.thumbnail === "string"
+                  ? item.thumbnail
+                  : "",
+
+              status:
+                savedStatus as SavedRecipeStatus,
+            };
+          })
+          .filter(
+            (recipe) =>
+              String(recipe.id).trim() !== "",
+          );
+
+      setSavedRecipes(normalizedRecipes);
     } catch (error) {
       console.error(
         "Unable to read saved recipes:",
@@ -181,12 +228,12 @@ export default function WatchlistPage() {
   };
 
   const handleStatusChange = (
-    recipeId: number,
+    recipeId: SavedRecipeId,
     newStatus: SavedRecipeStatus,
   ) => {
     const updatedRecipes = savedRecipes.map(
       (recipe) =>
-        Number(recipe.id) === Number(recipeId)
+        String(recipe.id) === String(recipeId)
           ? {
             ...recipe,
             status: newStatus,
@@ -197,17 +244,25 @@ export default function WatchlistPage() {
     saveRecipesToLocalStorage(updatedRecipes);
   };
 
-  const handleRemoveRecipe = (recipeId: number) => {
+  const handleRemoveRecipe = (
+    recipeId: SavedRecipeId,
+  ) => {
     const updatedRecipes = savedRecipes.filter(
       (recipe) =>
-        Number(recipe.id) !== Number(recipeId),
+        String(recipe.id) !== String(recipeId),
     );
 
     saveRecipesToLocalStorage(updatedRecipes);
   };
 
-  const handleViewRecipe = (recipeId: number) => {
-    router.push(`/trailer/${recipeId}`);
+  const handleViewRecipe = (
+    recipeId: SavedRecipeId,
+  ) => {
+    router.push(
+      `/trailer/${encodeURIComponent(
+        String(recipeId),
+      )}`,
+    );
   };
 
   const getStatusLabel = (
@@ -354,7 +409,7 @@ export default function WatchlistPage() {
           <section style={recipeGridStyle}>
             {savedRecipes.map((recipe) => (
               <article
-                key={recipe.id}
+                key={String(recipe.id)}
                 style={recipeCardStyle}
               >
                 <div style={imageWrapperStyle}>
@@ -390,7 +445,7 @@ export default function WatchlistPage() {
                   </p>
 
                   <label
-                    htmlFor={`status-${recipe.id}`}
+                    htmlFor={`status-${String(recipe.id)}`}
                     style={statusLabelStyle}
                   >
                     Cooking status
@@ -398,7 +453,7 @@ export default function WatchlistPage() {
 
                   <div style={selectWrapperStyle}>
                     <select
-                      id={`status-${recipe.id}`}
+                      id={`status-${String(recipe.id)}`}
                       value={recipe.status}
                       onChange={(event) =>
                         handleStatusChange(
