@@ -8,12 +8,16 @@ import type {
 
 import {
   useEffect,
-  useMemo,
   useState,
 } from "react";
 
-import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import {
+  useRouter,
+} from "next/navigation";
+
+import {
+  useSession,
+} from "next-auth/react";
 
 import Navbar from "@/app/components/Navbar";
 
@@ -29,16 +33,22 @@ import {
   UsersRound,
 } from "lucide-react";
 
-type Difficulty = "Easy" | "Medium" | "Hard";
+type Difficulty =
+  | "Easy"
+  | "Medium"
+  | "Hard";
 
 type CreateRecipeResponse = {
   success: boolean;
   message: string;
   errors?: string[];
+
   data?: {
     _id: string;
     title: string;
     imageUrl: string;
+    ownerId?: string;
+    authorName?: string;
   };
 };
 
@@ -67,115 +77,117 @@ export default function CreateRecipePage() {
     status: sessionStatus,
   } = useSession();
 
-  const [isMockLoggedIn, setIsMockLoggedIn] =
-    useState(false);
-
-  const [isAuthChecked, setIsAuthChecked] =
-    useState(false);
-
-  const [title, setTitle] = useState("");
+  const [title, setTitle] =
+    useState("");
 
   const [category, setCategory] =
     useState("Dessert");
 
-  const [timeMinutes, setTimeMinutes] =
-    useState("");
+  const [
+    timeMinutes,
+    setTimeMinutes,
+  ] = useState("");
 
-  const [difficulty, setDifficulty] =
-    useState<Difficulty>("Easy");
+  const [
+    difficulty,
+    setDifficulty,
+  ] = useState<Difficulty>(
+    "Easy",
+  );
 
   const [servings, setServings] =
     useState("");
 
-  const [description, setDescription] =
-    useState("");
+  const [
+    description,
+    setDescription,
+  ] = useState("");
 
-  const [ingredients, setIngredients] =
-    useState<string[]>([""]);
+  const [
+    ingredients,
+    setIngredients,
+  ] = useState<string[]>([
+    "",
+  ]);
 
   const [steps, setSteps] =
-    useState<string[]>([""]);
+    useState<string[]>([
+      "",
+    ]);
 
-  const [imageFile, setImageFile] =
-    useState<File | null>(null);
+  const [
+    imageFile,
+    setImageFile,
+  ] = useState<File | null>(
+    null,
+  );
 
-  const [imagePreview, setImagePreview] =
-    useState("");
+  const [
+    imagePreview,
+    setImagePreview,
+  ] = useState("");
 
   const [message, setMessage] =
     useState("");
 
-  const [isSuccess, setIsSuccess] =
-    useState(false);
+  const [
+    isSuccess,
+    setIsSuccess,
+  ] = useState(false);
 
-  const [isSubmitting, setIsSubmitting] =
-    useState(false);
-
-  const isGoogleLoggedIn =
-    sessionStatus === "authenticated";
+  const [
+    isSubmitting,
+    setIsSubmitting,
+  ] = useState(false);
 
   const isLoggedIn =
-    isMockLoggedIn || isGoogleLoggedIn;
+    sessionStatus ===
+    "authenticated";
+
+  const accessToken =
+    session?.accessToken || "";
+
+  const displayName =
+    session?.user?.username ||
+    session?.user?.name ||
+    "your account";
 
   useEffect(() => {
-    const mockLoginStatus =
-      localStorage.getItem("isLoggedIn") ===
-      "true";
-
-    setIsMockLoggedIn(mockLoginStatus);
-    setIsAuthChecked(true);
-  }, []);
-
-  useEffect(() => {
-    if (!isAuthChecked) {
-      return;
-    }
-
-    if (sessionStatus === "loading") {
-      return;
-    }
-
-    if (!isLoggedIn) {
+    if (
+      sessionStatus ===
+      "unauthenticated"
+    ) {
       router.replace(
         `/login?redirect=${encodeURIComponent(
-          "/create-recipe",
+          "/create_recipe",
         )}`,
       );
     }
   }, [
-    isAuthChecked,
-    isLoggedIn,
     router,
     sessionStatus,
   ]);
 
   useEffect(() => {
     return () => {
-      if (imagePreview.startsWith("blob:")) {
-        URL.revokeObjectURL(imagePreview);
+      if (
+        imagePreview.startsWith(
+          "blob:",
+        )
+      ) {
+        URL.revokeObjectURL(
+          imagePreview,
+        );
       }
     };
   }, [imagePreview]);
 
-  const authorName = useMemo(() => {
-    if (session?.user?.name) {
-      return session.user.name;
-    }
-
-    if (typeof window !== "undefined") {
-      return (
-        localStorage.getItem("mockUser") ||
-        "RecipePeeker User"
-      );
-    }
-
-    return "RecipePeeker User";
-  }, [session]);
-
   const handleImageChange = (
-    event: ChangeEvent<HTMLInputElement>,
+    event:
+      ChangeEvent<HTMLInputElement>,
   ) => {
-    const file = event.target.files?.[0];
+    const file =
+      event.target.files?.[0];
 
     setMessage("");
     setIsSuccess(false);
@@ -190,100 +202,168 @@ export default function CreateRecipePage() {
       "image/webp",
     ];
 
-    if (!allowedTypes.includes(file.type)) {
+    if (
+      !allowedTypes.includes(
+        file.type,
+      )
+    ) {
       setMessage(
         "Please choose a JPG, PNG or WEBP image.",
       );
 
       event.target.value = "";
+
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
+    if (
+      file.size >
+      5 * 1024 * 1024
+    ) {
       setMessage(
         "The recipe image must be smaller than 5 MB.",
       );
 
       event.target.value = "";
+
       return;
     }
 
-    if (imagePreview.startsWith("blob:")) {
-      URL.revokeObjectURL(imagePreview);
+    if (
+      imagePreview.startsWith(
+        "blob:",
+      )
+    ) {
+      URL.revokeObjectURL(
+        imagePreview,
+      );
     }
 
     const previewUrl =
-      URL.createObjectURL(file);
+      URL.createObjectURL(
+        file,
+      );
 
     setImageFile(file);
-    setImagePreview(previewUrl);
+    setImagePreview(
+      previewUrl,
+    );
   };
 
   const updateIngredient = (
     index: number,
     value: string,
   ) => {
-    setIngredients((currentIngredients) =>
-      currentIngredients.map(
-        (ingredient, ingredientIndex) =>
-          ingredientIndex === index
-            ? value
-            : ingredient,
-      ),
+    setIngredients(
+      (
+        currentIngredients,
+      ) =>
+        currentIngredients.map(
+          (
+            ingredient,
+            ingredientIndex,
+          ) =>
+            ingredientIndex ===
+            index
+              ? value
+              : ingredient,
+        ),
     );
   };
 
   const addIngredient = () => {
-    setIngredients((currentIngredients) => [
-      ...currentIngredients,
-      "",
-    ]);
+    setIngredients(
+      (
+        currentIngredients,
+      ) => [
+        ...currentIngredients,
+        "",
+      ],
+    );
   };
 
   const removeIngredient = (
     index: number,
   ) => {
-    setIngredients((currentIngredients) => {
-      if (currentIngredients.length === 1) {
-        return [""];
-      }
+    setIngredients(
+      (
+        currentIngredients,
+      ) => {
+        if (
+          currentIngredients.length ===
+          1
+        ) {
+          return [""];
+        }
 
-      return currentIngredients.filter(
-        (_ingredient, ingredientIndex) =>
-          ingredientIndex !== index,
-      );
-    });
+        return currentIngredients.filter(
+          (
+            _ingredient,
+            ingredientIndex,
+          ) =>
+            ingredientIndex !==
+            index,
+        );
+      },
+    );
   };
 
   const updateStep = (
     index: number,
     value: string,
   ) => {
-    setSteps((currentSteps) =>
-      currentSteps.map((step, stepIndex) =>
-        stepIndex === index ? value : step,
-      ),
+    setSteps(
+      (
+        currentSteps,
+      ) =>
+        currentSteps.map(
+          (
+            step,
+            stepIndex,
+          ) =>
+            stepIndex ===
+            index
+              ? value
+              : step,
+        ),
     );
   };
 
   const addStep = () => {
-    setSteps((currentSteps) => [
-      ...currentSteps,
-      "",
-    ]);
+    setSteps(
+      (
+        currentSteps,
+      ) => [
+        ...currentSteps,
+        "",
+      ],
+    );
   };
 
-  const removeStep = (index: number) => {
-    setSteps((currentSteps) => {
-      if (currentSteps.length === 1) {
-        return [""];
-      }
+  const removeStep = (
+    index: number,
+  ) => {
+    setSteps(
+      (
+        currentSteps,
+      ) => {
+        if (
+          currentSteps.length ===
+          1
+        ) {
+          return [""];
+        }
 
-      return currentSteps.filter(
-        (_step, stepIndex) =>
-          stepIndex !== index,
-      );
-    });
+        return currentSteps.filter(
+          (
+            _step,
+            stepIndex,
+          ) =>
+            stepIndex !==
+            index,
+        );
+      },
+    );
   };
 
   const resetForm = () => {
@@ -297,224 +377,321 @@ export default function CreateRecipePage() {
     setSteps([""]);
     setImageFile(null);
 
-    if (imagePreview.startsWith("blob:")) {
-      URL.revokeObjectURL(imagePreview);
+    if (
+      imagePreview.startsWith(
+        "blob:",
+      )
+    ) {
+      URL.revokeObjectURL(
+        imagePreview,
+      );
     }
 
     setImagePreview("");
   };
 
-  const handleSubmit = async (
-    event: FormEvent<HTMLFormElement>,
-  ) => {
-    event.preventDefault();
+  const handleSubmit =
+    async (
+      event:
+        FormEvent<HTMLFormElement>,
+    ) => {
+      event.preventDefault();
 
-    setMessage("");
-    setIsSuccess(false);
-
-    const cleanedIngredients =
-      ingredients
-        .map((ingredient) =>
-          ingredient.trim(),
-        )
-        .filter(
-          (ingredient) =>
-            ingredient.length > 0,
-        );
-
-    const cleanedSteps = steps
-      .map((step) => step.trim())
-      .filter((step) => step.length > 0);
-
-    if (!title.trim()) {
-      setMessage(
-        "Please enter the recipe title.",
-      );
-
-      return;
-    }
-
-    if (!imageFile) {
-      setMessage(
-        "Please choose a recipe image.",
-      );
-
-      return;
-    }
-
-    if (
-      !timeMinutes ||
-      Number(timeMinutes) < 1
-    ) {
-      setMessage(
-        "Cooking time must be at least 1 minute.",
-      );
-
-      return;
-    }
-
-    if (!servings || Number(servings) < 1) {
-      setMessage(
-        "Servings must be at least 1.",
-      );
-
-      return;
-    }
-
-    if (!description.trim()) {
-      setMessage(
-        "Please enter a recipe description.",
-      );
-
-      return;
-    }
-
-    if (cleanedIngredients.length === 0) {
-      setMessage(
-        "Please add at least one ingredient.",
-      );
-
-      return;
-    }
-
-    if (cleanedSteps.length === 0) {
-      setMessage(
-        "Please add at least one cooking step.",
-      );
-
-      return;
-    }
-
-    try {
-      setIsSubmitting(true);
-
-      const formData = new FormData();
-
-      formData.append(
-        "title",
-        title.trim(),
-      );
-
-      formData.append(
-        "category",
-        category,
-      );
-
-      formData.append(
-        "timeMinutes",
-        timeMinutes,
-      );
-
-      formData.append(
-        "difficulty",
-        difficulty,
-      );
-
-      formData.append(
-        "servings",
-        servings,
-      );
-
-      formData.append(
-        "description",
-        description.trim(),
-      );
-
-      formData.append(
-        "ingredients",
-        JSON.stringify(cleanedIngredients),
-      );
-
-      formData.append(
-        "steps",
-        JSON.stringify(cleanedSteps),
-      );
-
-      formData.append(
-        "authorName",
-        authorName,
-      );
-
-      formData.append(
-        "image",
-        imageFile,
-      );
-
-      const response = await fetch(
-        `${API_URL}/api/recipes`,
-        {
-          method: "POST",
-          body: formData,
-        },
-      );
-
-      const responseText =
-        await response.text();
-
-      let result: CreateRecipeResponse;
-
-      try {
-        result = JSON.parse(
-          responseText,
-        ) as CreateRecipeResponse;
-      } catch {
-        result = {
-          success: false,
-          message:
-            responseText ||
-            "The server returned an invalid response.",
-        };
-      }
-
-      if (!response.ok || !result.success) {
-        const errorDetails =
-          result.errors?.join(" ") ?? "";
-
-        throw new Error(
-          `${result.message} ${errorDetails}`.trim(),
-        );
-      }
-
-      setIsSuccess(true);
-
-      setMessage(
-        `Recipe "${
-          result.data?.title || title
-        }" was published successfully.`,
-      );
-
-      resetForm();
-    } catch (error) {
-      console.error(
-        "Unable to publish recipe:",
-        error,
-      );
-
+      setMessage("");
       setIsSuccess(false);
 
-      setMessage(
-        error instanceof Error
-          ? error.message
-          : "Unable to publish recipe.",
-      );
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+      if (
+        sessionStatus !==
+          "authenticated" ||
+        !accessToken
+      ) {
+        setMessage(
+          "Your login session was not found. Please login again.",
+        );
+
+        router.replace(
+          `/login?redirect=${encodeURIComponent(
+            "/create_recipe",
+          )}`,
+        );
+
+        return;
+      }
+
+      const cleanedIngredients =
+        ingredients
+          .map(
+            (
+              ingredient,
+            ) =>
+              ingredient.trim(),
+          )
+          .filter(
+            (
+              ingredient,
+            ) =>
+              ingredient.length >
+              0,
+          );
+
+      const cleanedSteps =
+        steps
+          .map(
+            (
+              step,
+            ) =>
+              step.trim(),
+          )
+          .filter(
+            (
+              step,
+            ) =>
+              step.length > 0,
+          );
+
+      if (!title.trim()) {
+        setMessage(
+          "Please enter the recipe title.",
+        );
+
+        return;
+      }
+
+      if (!imageFile) {
+        setMessage(
+          "Please choose a recipe image.",
+        );
+
+        return;
+      }
+
+      if (
+        !timeMinutes ||
+        Number(
+          timeMinutes,
+        ) < 1
+      ) {
+        setMessage(
+          "Cooking time must be at least 1 minute.",
+        );
+
+        return;
+      }
+
+      if (
+        !servings ||
+        Number(servings) < 1
+      ) {
+        setMessage(
+          "Servings must be at least 1.",
+        );
+
+        return;
+      }
+
+      if (
+        !description.trim()
+      ) {
+        setMessage(
+          "Please enter a recipe description.",
+        );
+
+        return;
+      }
+
+      if (
+        cleanedIngredients.length ===
+        0
+      ) {
+        setMessage(
+          "Please add at least one ingredient.",
+        );
+
+        return;
+      }
+
+      if (
+        cleanedSteps.length ===
+        0
+      ) {
+        setMessage(
+          "Please add at least one cooking step.",
+        );
+
+        return;
+      }
+
+      try {
+        setIsSubmitting(
+          true,
+        );
+
+        const formData =
+          new FormData();
+
+        formData.append(
+          "title",
+          title.trim(),
+        );
+
+        formData.append(
+          "category",
+          category,
+        );
+
+        formData.append(
+          "timeMinutes",
+          timeMinutes,
+        );
+
+        formData.append(
+          "difficulty",
+          difficulty,
+        );
+
+        formData.append(
+          "servings",
+          servings,
+        );
+
+        formData.append(
+          "description",
+          description.trim(),
+        );
+
+        formData.append(
+          "ingredients",
+          JSON.stringify(
+            cleanedIngredients,
+          ),
+        );
+
+        formData.append(
+          "steps",
+          JSON.stringify(
+            cleanedSteps,
+          ),
+        );
+
+        formData.append(
+          "image",
+          imageFile,
+        );
+
+        const response =
+          await fetch(
+            `${API_URL}/api/recipes`,
+            {
+              method:
+                "POST",
+
+              headers: {
+                Authorization:
+                  `Bearer ${accessToken}`,
+              },
+
+              body:
+                formData,
+            },
+          );
+
+        const responseText =
+          await response.text();
+
+        let result:
+          CreateRecipeResponse;
+
+        try {
+          result =
+            JSON.parse(
+              responseText,
+            ) as CreateRecipeResponse;
+        } catch {
+          result = {
+            success:
+              false,
+
+            message:
+              responseText ||
+              "The server returned an invalid response.",
+          };
+        }
+
+        if (
+          !response.ok ||
+          !result.success
+        ) {
+          const errorDetails =
+            result.errors?.join(
+              " ",
+            ) ?? "";
+
+          throw new Error(
+            `${
+              result.message ||
+              "Unable to publish recipe."
+            } ${errorDetails}`.trim(),
+          );
+        }
+
+        setIsSuccess(
+          true,
+        );
+
+        setMessage(
+          `Recipe "${
+            result.data
+              ?.title ||
+            title
+          }" was published successfully.`,
+        );
+
+        resetForm();
+      } catch (error) {
+        console.error(
+          "Unable to publish recipe:",
+          error,
+        );
+
+        setIsSuccess(
+          false,
+        );
+
+        setMessage(
+          error instanceof
+            Error
+            ? error.message
+            : "Unable to publish recipe.",
+        );
+      } finally {
+        setIsSubmitting(
+          false,
+        );
+      }
+    };
 
   if (
-    !isAuthChecked ||
-    sessionStatus === "loading"
+    sessionStatus ===
+    "loading"
   ) {
     return (
-      <main style={loadingPageStyle}>
+      <main
+        style={
+          loadingPageStyle
+        }
+      >
         <ChefHat
           size={44}
           color="#b90f2f"
         />
 
-        <p style={loadingTextStyle}>
-          Preparing your recipe form...
+        <p
+          style={
+            loadingTextStyle
+          }
+        >
+          Preparing your recipe
+          form...
         </p>
       </main>
     );
@@ -522,13 +699,21 @@ export default function CreateRecipePage() {
 
   if (!isLoggedIn) {
     return (
-      <main style={loadingPageStyle}>
+      <main
+        style={
+          loadingPageStyle
+        }
+      >
         <ChefHat
           size={44}
           color="#b90f2f"
         />
 
-        <p style={loadingTextStyle}>
+        <p
+          style={
+            loadingTextStyle
+          }
+        >
           Redirecting to login...
         </p>
       </main>
@@ -542,23 +727,33 @@ export default function CreateRecipePage() {
       <div className="pageContainer">
         <button
           type="button"
-          onClick={() => router.push("/")}
+          onClick={() =>
+            router.push("/")
+          }
           className="backButton"
         >
-          <ArrowLeft size={18} />
+          <ArrowLeft
+            size={18}
+          />
+
           Back to Home
         </button>
 
         <header className="pageHeader">
           <span className="eyebrow">
-            ✧ SHARE YOUR RECIPE ✧
+            ✧ SHARE YOUR RECIPE
+            ✧
           </span>
 
-          <h1>Create a New Recipe</h1>
+          <h1>
+            Create a New Recipe
+          </h1>
 
           <p>
-            Add your favorite homemade recipe,
-            ingredients and cooking steps to
+            Add your favorite
+            homemade recipe,
+            ingredients and
+            cooking steps to
             RecipePeeker.
           </p>
         </header>
@@ -571,24 +766,37 @@ export default function CreateRecipePage() {
                 : "message errorMessage"
             }
           >
-            {isSuccess ? "❦ " : ""}
+            {isSuccess
+              ? "❦ "
+              : ""}
+
             {message}
           </div>
         )}
 
         <form
-          onSubmit={handleSubmit}
+          onSubmit={
+            handleSubmit
+          }
           className="recipeForm"
         >
           <section className="formCard imageCard">
             <div className="sectionHeading">
               <span className="sectionIcon">
-                <ImagePlus size={21} />
+                <ImagePlus
+                  size={21}
+                />
               </span>
 
               <div>
-                <span>Recipe presentation</span>
-                <h2>Food Image</h2>
+                <span>
+                  Recipe
+                  presentation
+                </span>
+
+                <h2>
+                  Food Image
+                </h2>
               </div>
             </div>
 
@@ -598,20 +806,26 @@ export default function CreateRecipePage() {
             >
               {imagePreview ? (
                 <img
-                  src={imagePreview}
+                  src={
+                    imagePreview
+                  }
                   alt="Recipe preview"
                   className="imagePreview"
                 />
               ) : (
                 <div className="imagePlaceholder">
-                  <ImagePlus size={42} />
+                  <ImagePlus
+                    size={42}
+                  />
 
                   <strong>
-                    Choose a food image
+                    Choose a food
+                    image
                   </strong>
 
                   <span>
-                    JPG, PNG or WEBP — maximum
+                    JPG, PNG or
+                    WEBP — maximum
                     5 MB
                   </span>
                 </div>
@@ -621,14 +835,20 @@ export default function CreateRecipePage() {
                 id="recipe-image"
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
-                onChange={handleImageChange}
+                onChange={
+                  handleImageChange
+                }
+                disabled={
+                  isSubmitting
+                }
                 className="hiddenInput"
               />
             </label>
 
             {imageFile && (
               <p className="selectedFile">
-                Selected: {imageFile.name}
+                Selected:{" "}
+                {imageFile.name}
               </p>
             )}
           </section>
@@ -636,12 +856,20 @@ export default function CreateRecipePage() {
           <section className="formCard detailsCard">
             <div className="sectionHeading">
               <span className="sectionIcon">
-                <Sparkles size={21} />
+                <Sparkles
+                  size={21}
+                />
               </span>
 
               <div>
-                <span>Recipe information</span>
-                <h2>Basic Details</h2>
+                <span>
+                  Recipe
+                  information
+                </span>
+
+                <h2>
+                  Basic Details
+                </h2>
               </div>
             </div>
 
@@ -654,11 +882,19 @@ export default function CreateRecipePage() {
                 id="title"
                 type="text"
                 value={title}
-                onChange={(event) =>
-                  setTitle(event.target.value)
+                onChange={(
+                  event,
+                ) =>
+                  setTitle(
+                    event.target
+                      .value,
+                  )
                 }
                 placeholder="e.g. Cherry Cream Cake"
                 maxLength={120}
+                disabled={
+                  isSubmitting
+                }
               />
             </div>
 
@@ -671,19 +907,33 @@ export default function CreateRecipePage() {
                 <select
                   id="category"
                   value={category}
-                  onChange={(event) =>
+                  onChange={(
+                    event,
+                  ) =>
                     setCategory(
-                      event.target.value,
+                      event.target
+                        .value,
                     )
+                  }
+                  disabled={
+                    isSubmitting
                   }
                 >
                   {categories.map(
-                    (categoryItem) => (
+                    (
+                      categoryItem,
+                    ) => (
                       <option
-                        key={categoryItem}
-                        value={categoryItem}
+                        key={
+                          categoryItem
+                        }
+                        value={
+                          categoryItem
+                        }
                       >
-                        {categoryItem}
+                        {
+                          categoryItem
+                        }
                       </option>
                     ),
                   )}
@@ -697,12 +947,19 @@ export default function CreateRecipePage() {
 
                 <select
                   id="difficulty"
-                  value={difficulty}
-                  onChange={(event) =>
+                  value={
+                    difficulty
+                  }
+                  onChange={(
+                    event,
+                  ) =>
                     setDifficulty(
                       event.target
                         .value as Difficulty,
                     )
+                  }
+                  disabled={
+                    isSubmitting
                   }
                 >
                   <option value="Easy">
@@ -723,7 +980,10 @@ export default function CreateRecipePage() {
             <div className="twoColumnGrid">
               <div className="fieldGroup">
                 <label htmlFor="time">
-                  <Clock3 size={16} />
+                  <Clock3
+                    size={16}
+                  />
+
                   Cooking time
                 </label>
 
@@ -732,22 +992,35 @@ export default function CreateRecipePage() {
                     id="time"
                     type="number"
                     min="1"
-                    value={timeMinutes}
-                    onChange={(event) =>
+                    value={
+                      timeMinutes
+                    }
+                    onChange={(
+                      event,
+                    ) =>
                       setTimeMinutes(
-                        event.target.value,
+                        event.target
+                          .value,
                       )
                     }
                     placeholder="45"
+                    disabled={
+                      isSubmitting
+                    }
                   />
 
-                  <span>minutes</span>
+                  <span>
+                    minutes
+                  </span>
                 </div>
               </div>
 
               <div className="fieldGroup">
                 <label htmlFor="servings">
-                  <UsersRound size={16} />
+                  <UsersRound
+                    size={16}
+                  />
+
                   Servings
                 </label>
 
@@ -756,16 +1029,26 @@ export default function CreateRecipePage() {
                     id="servings"
                     type="number"
                     min="1"
-                    value={servings}
-                    onChange={(event) =>
+                    value={
+                      servings
+                    }
+                    onChange={(
+                      event,
+                    ) =>
                       setServings(
-                        event.target.value,
+                        event.target
+                          .value,
                       )
                     }
                     placeholder="4"
+                    disabled={
+                      isSubmitting
+                    }
                   />
 
-                  <span>servings</span>
+                  <span>
+                    servings
+                  </span>
                 </div>
               </div>
             </div>
@@ -777,15 +1060,23 @@ export default function CreateRecipePage() {
 
               <textarea
                 id="description"
-                value={description}
-                onChange={(event) =>
+                value={
+                  description
+                }
+                onChange={(
+                  event,
+                ) =>
                   setDescription(
-                    event.target.value,
+                    event.target
+                      .value,
                   )
                 }
                 placeholder="Tell everyone what makes this recipe special..."
                 rows={5}
                 maxLength={2000}
+                disabled={
+                  isSubmitting
+                }
               />
             </div>
           </section>
@@ -793,21 +1084,29 @@ export default function CreateRecipePage() {
           <section className="formCard ingredientsCard">
             <div className="sectionHeading">
               <span className="sectionIcon">
-                <ChefHat size={21} />
+                <ChefHat
+                  size={21}
+                />
               </span>
 
               <div>
                 <span>
-                  What you&apos;ll need
+                  What you&apos;ll
+                  need
                 </span>
 
-                <h2>Ingredients</h2>
+                <h2>
+                  Ingredients
+                </h2>
               </div>
             </div>
 
             <div className="dynamicList">
               {ingredients.map(
-                (ingredient, index) => (
+                (
+                  ingredient,
+                  index,
+                ) => (
                   <div
                     key={`ingredient-${index}`}
                     className="dynamicRow"
@@ -818,27 +1117,43 @@ export default function CreateRecipePage() {
 
                     <input
                       type="text"
-                      value={ingredient}
-                      onChange={(event) =>
+                      value={
+                        ingredient
+                      }
+                      onChange={(
+                        event,
+                      ) =>
                         updateIngredient(
                           index,
-                          event.target.value,
+                          event
+                            .target
+                            .value,
                         )
                       }
                       placeholder="e.g. 2 cups all-purpose flour"
+                      disabled={
+                        isSubmitting
+                      }
                     />
 
                     <button
                       type="button"
                       className="removeButton"
                       onClick={() =>
-                        removeIngredient(index)
+                        removeIngredient(
+                          index,
+                        )
                       }
                       aria-label={`Remove ingredient ${
                         index + 1
                       }`}
+                      disabled={
+                        isSubmitting
+                      }
                     >
-                      <Minus size={18} />
+                      <Minus
+                        size={18}
+                      />
                     </button>
                   </div>
                 ),
@@ -847,10 +1162,16 @@ export default function CreateRecipePage() {
 
             <button
               type="button"
-              onClick={addIngredient}
+              onClick={
+                addIngredient
+              }
               className="addItemButton"
+              disabled={
+                isSubmitting
+              }
             >
               <Plus size={18} />
+
               Add Ingredient
             </button>
           </section>
@@ -858,61 +1179,91 @@ export default function CreateRecipePage() {
           <section className="formCard stepsCard">
             <div className="sectionHeading">
               <span className="sectionIcon">
-                <Sparkles size={21} />
+                <Sparkles
+                  size={21}
+                />
               </span>
 
               <div>
-                <span>Follow along</span>
-                <h2>Cooking Steps</h2>
+                <span>
+                  Follow along
+                </span>
+
+                <h2>
+                  Cooking Steps
+                </h2>
               </div>
             </div>
 
             <div className="dynamicList">
-              {steps.map((step, index) => (
-                <div
-                  key={`step-${index}`}
-                  className="dynamicRow stepRow"
-                >
-                  <span className="rowNumber">
-                    {index + 1}
-                  </span>
-
-                  <textarea
-                    value={step}
-                    onChange={(event) =>
-                      updateStep(
-                        index,
-                        event.target.value,
-                      )
-                    }
-                    placeholder={`Describe cooking step ${
-                      index + 1
-                    }`}
-                    rows={3}
-                  />
-
-                  <button
-                    type="button"
-                    className="removeButton"
-                    onClick={() =>
-                      removeStep(index)
-                    }
-                    aria-label={`Remove step ${
-                      index + 1
-                    }`}
+              {steps.map(
+                (
+                  step,
+                  index,
+                ) => (
+                  <div
+                    key={`step-${index}`}
+                    className="dynamicRow stepRow"
                   >
-                    <Minus size={18} />
-                  </button>
-                </div>
-              ))}
+                    <span className="rowNumber">
+                      {index + 1}
+                    </span>
+
+                    <textarea
+                      value={step}
+                      onChange={(
+                        event,
+                      ) =>
+                        updateStep(
+                          index,
+                          event
+                            .target
+                            .value,
+                        )
+                      }
+                      placeholder={`Describe cooking step ${
+                        index + 1
+                      }`}
+                      rows={3}
+                      disabled={
+                        isSubmitting
+                      }
+                    />
+
+                    <button
+                      type="button"
+                      className="removeButton"
+                      onClick={() =>
+                        removeStep(
+                          index,
+                        )
+                      }
+                      aria-label={`Remove step ${
+                        index + 1
+                      }`}
+                      disabled={
+                        isSubmitting
+                      }
+                    >
+                      <Minus
+                        size={18}
+                      />
+                    </button>
+                  </div>
+                ),
+              )}
             </div>
 
             <button
               type="button"
               onClick={addStep}
               className="addItemButton"
+              disabled={
+                isSubmitting
+              }
             >
               <Plus size={18} />
+
               Add Cooking Step
             </button>
           </section>
@@ -920,21 +1271,33 @@ export default function CreateRecipePage() {
           <section className="publishCard">
             <div>
               <span className="publishDecoration">
-                ❦ Ready to share? ❦
+                ❦ Ready to
+                share? ❦
               </span>
 
-              <h2>Publish Your Recipe</h2>
+              <h2>
+                Publish Your
+                Recipe
+              </h2>
 
               <p>
-                Your recipe will be saved to
-                MongoDB under the name{" "}
-                <strong>{authorName}</strong>.
+                Your recipe will
+                be saved to
+                MongoDB under
+                the account{" "}
+
+                <strong>
+                  {displayName}
+                </strong>
+                .
               </p>
             </div>
 
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={
+                isSubmitting
+              }
               className="publishButton"
             >
               <Save size={19} />
@@ -954,12 +1317,22 @@ export default function CreateRecipePage() {
           background:
             radial-gradient(
               circle at top left,
-              rgba(255, 255, 255, 0.95),
+              rgba(
+                255,
+                255,
+                255,
+                0.95
+              ),
               transparent 28%
             ),
             radial-gradient(
               circle at bottom right,
-              rgba(217, 32, 69, 0.07),
+              rgba(
+                217,
+                32,
+                69,
+                0.07
+              ),
               transparent 32%
             ),
             #fff7ed;
@@ -979,12 +1352,20 @@ export default function CreateRecipePage() {
           gap: 8px;
           margin-bottom: 26px;
           padding: 11px 17px;
-          border: 1px solid #ead7c4;
+          border: 1px solid
+            #ead7c4;
           border-radius: 999px;
           color: #8f0d25;
-          background-color: #fffaf3;
-          box-shadow: 0 8px 20px
-            rgba(95, 31, 35, 0.08);
+          background-color:
+            #fffaf3;
+          box-shadow:
+            0 8px 20px
+            rgba(
+              95,
+              31,
+              35,
+              0.08
+            );
           cursor: pointer;
           font-weight: 700;
         }
@@ -998,7 +1379,8 @@ export default function CreateRecipePage() {
           display: block;
           margin-bottom: 10px;
           color: #b90f2f;
-          font-family: Georgia, serif;
+          font-family:
+            Georgia, serif;
           font-size: 13px;
           letter-spacing: 1.4px;
         }
@@ -1006,7 +1388,8 @@ export default function CreateRecipePage() {
         .pageHeader h1 {
           margin: 0 0 12px;
           color: #8f0d25;
-          font-family: Georgia, serif;
+          font-family:
+            Georgia, serif;
           font-size: clamp(
             38px,
             6vw,
@@ -1031,32 +1414,47 @@ export default function CreateRecipePage() {
         }
 
         .successMessage {
-          border: 1px solid #cce6d1;
+          border: 1px solid
+            #cce6d1;
           color: #3f7b50;
-          background-color: #edf7ee;
+          background-color:
+            #edf7ee;
         }
 
         .errorMessage {
-          border: 1px solid #f1c4cb;
+          border: 1px solid
+            #f1c4cb;
           color: #b90f2f;
-          background-color: #fff0f2;
+          background-color:
+            #fff0f2;
         }
 
         .recipeForm {
           display: grid;
           grid-template-columns:
-            repeat(2, minmax(0, 1fr));
+            repeat(
+              2,
+              minmax(0, 1fr)
+            );
           gap: 24px;
         }
 
         .formCard {
           box-sizing: border-box;
           padding: 30px;
-          border: 1px solid #ead7c4;
+          border: 1px solid
+            #ead7c4;
           border-radius: 26px;
-          background-color: #fffaf3;
-          box-shadow: 0 16px 42px
-            rgba(95, 31, 35, 0.09);
+          background-color:
+            #fffaf3;
+          box-shadow:
+            0 16px 42px
+            rgba(
+              95,
+              31,
+              35,
+              0.09
+            );
         }
 
         .ingredientsCard,
@@ -1081,15 +1479,19 @@ export default function CreateRecipePage() {
           flex-shrink: 0;
           border-radius: 15px;
           color: white;
-          background-color: #b90f2f;
+          background-color:
+            #b90f2f;
         }
 
         .sectionHeading
-          span:not(.sectionIcon) {
+          span:not(
+            .sectionIcon
+          ) {
           display: block;
           margin-bottom: 3px;
           color: #b90f2f;
-          font-family: Georgia, serif;
+          font-family:
+            Georgia, serif;
           font-size: 12px;
           letter-spacing: 0.7px;
         }
@@ -1097,7 +1499,8 @@ export default function CreateRecipePage() {
         .sectionHeading h2 {
           margin: 0;
           color: #8f0d25;
-          font-family: Georgia, serif;
+          font-family:
+            Georgia, serif;
           font-size: 27px;
         }
 
@@ -1105,9 +1508,11 @@ export default function CreateRecipePage() {
           min-height: 360px;
           display: flex;
           overflow: hidden;
-          border: 2px dashed #d8b9a6;
+          border: 2px dashed
+            #d8b9a6;
           border-radius: 22px;
-          background-color: #fff7ed;
+          background-color:
+            #fff7ed;
           cursor: pointer;
         }
 
@@ -1123,13 +1528,16 @@ export default function CreateRecipePage() {
           text-align: center;
         }
 
-        .imagePlaceholder strong {
+        .imagePlaceholder
+          strong {
           color: #8f0d25;
-          font-family: Georgia, serif;
+          font-family:
+            Georgia, serif;
           font-size: 21px;
         }
 
-        .imagePlaceholder span {
+        .imagePlaceholder
+          span {
           color: #9a6b5f;
           font-size: 13px;
         }
@@ -1179,35 +1587,69 @@ export default function CreateRecipePage() {
           width: 100%;
           box-sizing: border-box;
           padding: 14px 15px;
-          border: 1px solid #ead7c4;
+          border: 1px solid
+            #ead7c4;
           border-radius: 14px;
           outline: none;
           color: #5f1f23;
-          background-color: #fffdf9;
+          background-color:
+            #fffdf9;
           font-family: inherit;
           font-size: 15px;
         }
 
-        .fieldGroup textarea,
-        .dynamicRow textarea {
+        .fieldGroup
+          textarea,
+        .dynamicRow
+          textarea {
           resize: vertical;
           line-height: 1.6;
         }
 
-        .fieldGroup input:focus,
-        .fieldGroup select:focus,
-        .fieldGroup textarea:focus,
-        .dynamicRow input:focus,
-        .dynamicRow textarea:focus {
-          border-color: #b90f2f;
-          box-shadow: 0 0 0 3px
-            rgba(185, 15, 47, 0.08);
+        .fieldGroup
+          input:focus,
+        .fieldGroup
+          select:focus,
+        .fieldGroup
+          textarea:focus,
+        .dynamicRow
+          input:focus,
+        .dynamicRow
+          textarea:focus {
+          border-color:
+            #b90f2f;
+          box-shadow:
+            0 0 0 3px
+            rgba(
+              185,
+              15,
+              47,
+              0.08
+            );
+        }
+
+        .fieldGroup
+          input:disabled,
+        .fieldGroup
+          select:disabled,
+        .fieldGroup
+          textarea:disabled,
+        .dynamicRow
+          input:disabled,
+        .dynamicRow
+          textarea:disabled {
+          cursor:
+            not-allowed;
+          opacity: 0.7;
         }
 
         .twoColumnGrid {
           display: grid;
           grid-template-columns:
-            repeat(2, minmax(0, 1fr));
+            repeat(
+              2,
+              minmax(0, 1fr)
+            );
           gap: 16px;
           margin-bottom: 20px;
         }
@@ -1216,17 +1658,21 @@ export default function CreateRecipePage() {
           display: flex;
           align-items: center;
           overflow: hidden;
-          border: 1px solid #ead7c4;
+          border: 1px solid
+            #ead7c4;
           border-radius: 14px;
-          background-color: #fffdf9;
+          background-color:
+            #fffdf9;
         }
 
-        .numberInputWrapper input {
+        .numberInputWrapper
+          input {
           border: none;
           box-shadow: none;
         }
 
-        .numberInputWrapper span {
+        .numberInputWrapper
+          span {
           padding-right: 14px;
           color: #9a6b5f;
           font-size: 12px;
@@ -1242,7 +1688,9 @@ export default function CreateRecipePage() {
         .dynamicRow {
           display: grid;
           grid-template-columns:
-            38px minmax(0, 1fr) 42px;
+            38px
+            minmax(0, 1fr)
+            42px;
           align-items: center;
           gap: 11px;
         }
@@ -1259,7 +1707,8 @@ export default function CreateRecipePage() {
           justify-content: center;
           border-radius: 50%;
           color: white;
-          background-color: #b90f2f;
+          background-color:
+            #b90f2f;
           font-weight: 700;
         }
 
@@ -1269,11 +1718,20 @@ export default function CreateRecipePage() {
           display: flex;
           align-items: center;
           justify-content: center;
-          border: 1px solid #efd1cf;
+          border: 1px solid
+            #efd1cf;
           border-radius: 12px;
           color: #b90f2f;
-          background-color: #fff0f2;
+          background-color:
+            #fff0f2;
           cursor: pointer;
+        }
+
+        .removeButton:disabled,
+        .addItemButton:disabled {
+          cursor:
+            not-allowed;
+          opacity: 0.6;
         }
 
         .addItemButton {
@@ -1283,10 +1741,12 @@ export default function CreateRecipePage() {
           gap: 8px;
           margin-top: 18px;
           padding: 12px 18px;
-          border: 1px solid #b90f2f;
+          border: 1px solid
+            #b90f2f;
           border-radius: 13px;
           color: #b90f2f;
-          background-color: #fffaf3;
+          background-color:
+            #fffaf3;
           cursor: pointer;
           font-weight: 700;
         }
@@ -1294,42 +1754,54 @@ export default function CreateRecipePage() {
         .publishCard {
           display: flex;
           align-items: center;
-          justify-content: space-between;
+          justify-content:
+            space-between;
           gap: 24px;
           padding: 30px;
-          border: 1px solid #ead7c4;
+          border: 1px solid
+            #ead7c4;
           border-radius: 26px;
           color: white;
-          background: linear-gradient(
-            135deg,
-            #8f0d25,
-            #c71438
-          );
-          box-shadow: 0 22px 50px
-            rgba(143, 13, 37, 0.2);
+          background:
+            linear-gradient(
+              135deg,
+              #8f0d25,
+              #c71438
+            );
+          box-shadow:
+            0 22px 50px
+            rgba(
+              143,
+              13,
+              37,
+              0.2
+            );
         }
 
         .publishDecoration {
           display: block;
           margin-bottom: 6px;
-          font-family: Georgia, serif;
+          font-family:
+            Georgia, serif;
           letter-spacing: 1px;
         }
 
         .publishCard h2 {
           margin: 0 0 7px;
-          font-family: Georgia, serif;
+          font-family:
+            Georgia, serif;
           font-size: 29px;
         }
 
         .publishCard p {
           margin: 0;
-          color: rgba(
-            255,
-            255,
-            255,
-            0.84
-          );
+          color:
+            rgba(
+              255,
+              255,
+              255,
+              0.84
+            );
           line-height: 1.6;
         }
 
@@ -1343,21 +1815,32 @@ export default function CreateRecipePage() {
           border: none;
           border-radius: 15px;
           color: #8f0d25;
-          background-color: #fffaf3;
-          box-shadow: 0 14px 30px
-            rgba(95, 31, 35, 0.22);
+          background-color:
+            #fffaf3;
+          box-shadow:
+            0 14px 30px
+            rgba(
+              95,
+              31,
+              35,
+              0.22
+            );
           cursor: pointer;
           font-weight: 800;
         }
 
         .publishButton:disabled {
-          cursor: not-allowed;
+          cursor:
+            not-allowed;
           opacity: 0.7;
         }
 
-        @media (max-width: 860px) {
+        @media (
+          max-width: 860px
+        ) {
           .recipeForm {
-            grid-template-columns: 1fr;
+            grid-template-columns:
+              1fr;
           }
 
           .imageCard,
@@ -1369,8 +1852,10 @@ export default function CreateRecipePage() {
           }
 
           .publishCard {
-            align-items: flex-start;
-            flex-direction: column;
+            align-items:
+              flex-start;
+            flex-direction:
+              column;
           }
 
           .publishButton {
@@ -1378,23 +1863,32 @@ export default function CreateRecipePage() {
           }
         }
 
-        @media (max-width: 560px) {
+        @media (
+          max-width: 560px
+        ) {
           .pageContainer {
-            padding: 30px 14px 60px;
+            padding:
+              30px 14px
+              60px;
           }
 
           .formCard {
-            padding: 22px 17px;
-            border-radius: 22px;
+            padding:
+              22px 17px;
+            border-radius:
+              22px;
           }
 
           .twoColumnGrid {
-            grid-template-columns: 1fr;
+            grid-template-columns:
+              1fr;
           }
 
           .dynamicRow {
             grid-template-columns:
-              32px minmax(0, 1fr) 38px;
+              32px
+              minmax(0, 1fr)
+              38px;
             gap: 7px;
           }
 
@@ -1420,20 +1914,27 @@ export default function CreateRecipePage() {
   );
 }
 
-const loadingPageStyle: CSSProperties = {
-  minHeight: "100vh",
-  display: "flex",
-  flexDirection: "column",
-  alignItems: "center",
-  justifyContent: "center",
-  gap: "14px",
-  color: "#8a5c52",
-  backgroundColor: "#fff7ed",
-};
+const loadingPageStyle:
+  CSSProperties = {
+    minHeight: "100vh",
+    display: "flex",
+    flexDirection:
+      "column",
+    alignItems:
+      "center",
+    justifyContent:
+      "center",
+    gap: "14px",
+    color: "#8a5c52",
+    backgroundColor:
+      "#fff7ed",
+  };
 
-const loadingTextStyle: CSSProperties = {
-  margin: 0,
-  color: "#8a5c52",
-  fontFamily: "Georgia, serif",
-  fontSize: "17px",
-};
+const loadingTextStyle:
+  CSSProperties = {
+    margin: 0,
+    color: "#8a5c52",
+    fontFamily:
+      "Georgia, serif",
+    fontSize: "17px",
+  };

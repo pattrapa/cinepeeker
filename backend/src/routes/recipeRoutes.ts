@@ -1,27 +1,85 @@
-import { Router } from "express";
+import {
+  Router,
+} from "express";
 
 import {
   createRecipe,
   deleteRecipe,
+  getMyRecipes,
   getRecipeById,
   getRecipes,
   updateRecipe,
 } from "../controllers/recipeController";
 
-import { uploadRecipeImage } from "../middleware/uploadRecipeImage";
+import {
+  authMiddleware,
+} from "../middleware/authMiddleware";
 
-const recipeRouter = Router();
+import {
+  uploadRecipeImage,
+} from "../middleware/uploadRecipeImage";
 
-recipeRouter.get("/", getRecipes);
+const recipeRouter =
+  Router();
+
+/*
+ * Public routes
+ */
+recipeRouter.get(
+  "/",
+  getRecipes,
+);
+
+/*
+ * ต้องวาง /mine ก่อน /:id
+ * ไม่อย่างนั้น Express จะมองคำว่า mine เป็น ID
+ */
+recipeRouter.get(
+  "/mine",
+  authMiddleware,
+  getMyRecipes,
+);
 
 recipeRouter.post(
   "/",
-  uploadRecipeImage.single("image"),
+  authMiddleware,
+  uploadRecipeImage.single(
+    "image",
+  ),
   createRecipe,
 );
 
-recipeRouter.get("/:id", getRecipeById);
-recipeRouter.patch("/:id", updateRecipe);
-recipeRouter.delete("/:id", deleteRecipe);
+recipeRouter.get(
+  "/:id",
+  getRecipeById,
+);
+
+/*
+ * รองรับทั้ง PATCH และ PUT
+ * เพราะหน้า Edit ปัจจุบันยังส่ง PUT
+ */
+recipeRouter.patch(
+  "/:id",
+  authMiddleware,
+  uploadRecipeImage.single(
+    "image",
+  ),
+  updateRecipe,
+);
+
+recipeRouter.put(
+  "/:id",
+  authMiddleware,
+  uploadRecipeImage.single(
+    "image",
+  ),
+  updateRecipe,
+);
+
+recipeRouter.delete(
+  "/:id",
+  authMiddleware,
+  deleteRecipe,
+);
 
 export default recipeRouter;
