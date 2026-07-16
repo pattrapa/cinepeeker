@@ -6,13 +6,8 @@ import {
   useState,
 } from "react";
 
-import {
-  useRouter,
-} from "next/navigation";
-
-import {
-  useSession,
-} from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 
 import Navbar from "@/app/components/Navbar";
 
@@ -23,7 +18,7 @@ import {
   Eye,
   LoaderCircle,
   Pencil,
-  PlusCircle,
+  Plus,
   RefreshCw,
   Trash2,
 } from "lucide-react";
@@ -92,6 +87,14 @@ export default function MyRecipesPage() {
   const [deletingRecipeId, setDeletingRecipeId] =
     useState<string | null>(null);
 
+  const [recipeToDelete, setRecipeToDelete] =
+    useState<Recipe | null>(null);
+
+  const [
+    deleteErrorMessage,
+    setDeleteErrorMessage,
+  ] = useState("");
+
   const isGoogleLoggedIn =
     sessionStatus === "authenticated";
 
@@ -109,13 +112,15 @@ export default function MyRecipesPage() {
       "true";
 
     const storedMockUser =
-      localStorage.getItem("mockUser")?.trim();
+      localStorage
+        .getItem("mockUser")
+        ?.trim();
 
     setIsMockLoggedIn(mockLoginStatus);
 
     setMockUserName(
       storedMockUser ||
-        "RecipePeeker User",
+      "RecipePeeker User",
     );
 
     setIsAuthChecked(true);
@@ -133,7 +138,7 @@ export default function MyRecipesPage() {
     if (!isLoggedIn) {
       router.replace(
         `/login?redirect=${encodeURIComponent(
-          "/my_recipes",
+          "/my_recipe",
         )}`,
       );
     }
@@ -171,36 +176,41 @@ export default function MyRecipesPage() {
         } catch {
           throw new Error(
             responseText ||
-              "The server returned an invalid response.",
+            "The server returned an invalid response.",
           );
         }
 
-        if (!response.ok || !result.success) {
+        if (
+          !response.ok ||
+          !result.success
+        ) {
           throw new Error(
             result.message ||
-              "Unable to load your recipes.",
+            "Unable to load your recipes.",
           );
         }
 
-        const allRecipes = Array.isArray(
-          result.data,
-        )
-          ? result.data
-          : [];
+        const allRecipes =
+          Array.isArray(result.data)
+            ? result.data
+            : [];
 
         const normalizedAuthorName =
-          authorName.toLowerCase().trim();
+          authorName
+            .toLowerCase()
+            .trim();
 
-        const myRecipes = allRecipes.filter(
-          (recipe) =>
-            (
-              recipe.authorName ||
-              "RecipePeeker User"
-            )
-              .toLowerCase()
-              .trim() ===
-            normalizedAuthorName,
-        );
+        const myRecipes =
+          allRecipes.filter(
+            (recipe) =>
+              (
+                recipe.authorName ||
+                "RecipePeeker User"
+              )
+                .toLowerCase()
+                .trim() ===
+              normalizedAuthorName,
+          );
 
         setRecipes(myRecipes);
       } catch (error) {
@@ -243,19 +253,70 @@ export default function MyRecipesPage() {
     sessionStatus,
   ]);
 
-  const handleDeleteRecipe = async (
+  const openDeleteModal = (
     recipe: Recipe,
-  ): Promise<void> => {
-    const confirmed = window.confirm(
-      `Delete "${recipe.title}"?\n\nThis action cannot be undone.`,
-    );
+  ) => {
+    setDeleteErrorMessage("");
+    setRecipeToDelete(recipe);
+  };
 
-    if (!confirmed) {
+  const closeDeleteModal = () => {
+    if (deletingRecipeId) {
       return;
     }
 
+    setDeleteErrorMessage("");
+    setRecipeToDelete(null);
+  };
+
+  useEffect(() => {
+    if (!recipeToDelete) {
+      return;
+    }
+
+    const previousOverflow =
+      document.body.style.overflow;
+
+    document.body.style.overflow =
+      "hidden";
+
+    const handleKeyDown = (
+      event: KeyboardEvent,
+    ) => {
+      if (
+        event.key === "Escape" &&
+        !deletingRecipeId
+      ) {
+        setDeleteErrorMessage("");
+        setRecipeToDelete(null);
+      }
+    };
+
+    window.addEventListener(
+      "keydown",
+      handleKeyDown,
+    );
+
+    return () => {
+      document.body.style.overflow =
+        previousOverflow;
+
+      window.removeEventListener(
+        "keydown",
+        handleKeyDown,
+      );
+    };
+  }, [
+    deletingRecipeId,
+    recipeToDelete,
+  ]);
+
+  const handleDeleteRecipe = async (
+    recipe: Recipe,
+  ): Promise<void> => {
     try {
       setDeletingRecipeId(recipe._id);
+      setDeleteErrorMessage("");
       setErrorMessage("");
       setSuccessMessage("");
 
@@ -278,42 +339,56 @@ export default function MyRecipesPage() {
       } catch {
         throw new Error(
           responseText ||
-            "The server returned an invalid response.",
+          "The server returned an invalid response.",
         );
       }
 
-      if (!response.ok || !result.success) {
+      if (
+        !response.ok ||
+        !result.success
+      ) {
         throw new Error(
           result.message ||
-            "Unable to delete this recipe.",
+          "Unable to delete this recipe.",
         );
       }
 
-      setRecipes((currentRecipes) =>
-        currentRecipes.filter(
-          (currentRecipe) =>
-            currentRecipe._id !== recipe._id,
-        ),
+      setRecipes(
+        (currentRecipes) =>
+          currentRecipes.filter(
+            (currentRecipe) =>
+              currentRecipe._id !==
+              recipe._id,
+          ),
       );
 
       removeRecipeFromWatchlist(
         recipe._id,
       );
 
+      setRecipeToDelete(null);
+
       setSuccessMessage(
         `Recipe "${recipe.title}" was deleted successfully.`,
       );
+
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
     } catch (error) {
       console.error(
         "Unable to delete recipe:",
         error,
       );
 
-      setErrorMessage(
+      const message =
         error instanceof Error
           ? error.message
-          : "Unable to delete this recipe.",
-      );
+          : "Unable to delete this recipe.";
+
+      setDeleteErrorMessage(message);
+      setErrorMessage(message);
     } finally {
       setDeletingRecipeId(null);
     }
@@ -339,7 +414,9 @@ export default function MyRecipesPage() {
       <div className="pageContainer">
         <button
           type="button"
-          onClick={() => router.push("/")}
+          onClick={() =>
+            router.push("/")
+          }
           className="backButton"
         >
           <ArrowLeft size={18} />
@@ -355,18 +432,14 @@ export default function MyRecipesPage() {
             <h1>My Recipes</h1>
 
             <p>
-              View and manage recipes created by{" "}
-              <strong>{authorName}</strong>.
+              View and manage recipes
+              created by{" "}
+              <strong>
+                {authorName}
+              </strong>
+              .
             </p>
           </div>
-
-          <a
-            href="/create_recipe"
-            className="addRecipeButton"
-          >
-            <PlusCircle size={19} />
-            Add Recipe
-          </a>
         </header>
 
         {successMessage && (
@@ -388,7 +461,9 @@ export default function MyRecipesPage() {
               className="loadingIcon"
             />
 
-            <h2>Loading your recipes...</h2>
+            <h2>
+              Loading your recipes...
+            </h2>
 
             <p>
               กำลังดึงสูตรอาหารของคุณจาก
@@ -400,11 +475,13 @@ export default function MyRecipesPage() {
           <section className="statusCard">
             <RefreshCw size={42} />
 
-            <h2>Unable to load recipes</h2>
+            <h2>
+              Unable to load recipes
+            </h2>
 
             <p>
-              ตรวจสอบว่า Backend เปิดอยู่ที่{" "}
-              {API_URL}
+              ตรวจสอบว่า Backend
+              เปิดอยู่ที่ {API_URL}
             </p>
 
             <button
@@ -425,18 +502,10 @@ export default function MyRecipesPage() {
             <h2>No recipes yet</h2>
 
             <p>
-              You have not published any recipes
-              yet. Share your first recipe with
-              RecipePeeker.
+              You have not published any
+              recipes yet. Share your first
+              recipe with RecipePeeker.
             </p>
-
-            <a
-              href="/create_recipe"
-              className="emptyAddButton"
-            >
-              <PlusCircle size={18} />
-              Create My First Recipe
-            </a>
           </section>
         ) : (
           <>
@@ -460,7 +529,9 @@ export default function MyRecipesPage() {
                   >
                     <div className="imageWrapper">
                       <img
-                        src={recipe.imageUrl}
+                        src={
+                          recipe.imageUrl
+                        }
                         alt={recipe.title}
                       />
 
@@ -469,7 +540,9 @@ export default function MyRecipesPage() {
                       </span>
 
                       <span className="difficultyBadge">
-                        {recipe.difficulty}
+                        {
+                          recipe.difficulty
+                        }
                       </span>
                     </div>
 
@@ -478,22 +551,36 @@ export default function MyRecipesPage() {
                         ❦ My Recipe
                       </span>
 
-                      <h2>{recipe.title}</h2>
+                      <h2>
+                        {recipe.title}
+                      </h2>
 
                       <p className="description">
-                        {recipe.description}
+                        {
+                          recipe.description
+                        }
                       </p>
 
                       <div className="recipeMeta">
                         <span>
-                          <Clock3 size={16} />
-                          {recipe.timeMinutes} mins
+                          <Clock3
+                            size={16}
+                          />
+                          {
+                            recipe.timeMinutes
+                          }{" "}
+                          mins
                         </span>
 
                         <span>
-                          <ChefHat size={16} />
-                          {recipe.servings}{" "}
-                          {recipe.servings === 1
+                          <ChefHat
+                            size={16}
+                          />
+                          {
+                            recipe.servings
+                          }{" "}
+                          {recipe.servings ===
+                            1
                             ? "serving"
                             : "servings"}
                         </span>
@@ -522,18 +609,22 @@ export default function MyRecipesPage() {
                           }
                           className="editButton"
                         >
-                          <Pencil size={18} />
+                          <Pencil
+                            size={18}
+                          />
                           Edit
                         </button>
 
                         <button
                           type="button"
-                          disabled={isDeleting}
-                          onClick={() => {
-                            void handleDeleteRecipe(
+                          disabled={
+                            isDeleting
+                          }
+                          onClick={() =>
+                            openDeleteModal(
                               recipe,
-                            );
-                          }}
+                            )
+                          }
                           className="deleteButton"
                           aria-label={`Delete ${recipe.title}`}
                         >
@@ -543,8 +634,14 @@ export default function MyRecipesPage() {
                               className="buttonLoadingIcon"
                             />
                           ) : (
-                            <Trash2 size={18} />
+                            <Trash2 size={20} strokeWidth={2.2} />
                           )}
+
+                          <span>
+                            {isDeleting
+                              ? "Deleting..."
+                              : "Delete"}
+                          </span>
                         </button>
                       </div>
                     </div>
@@ -556,6 +653,116 @@ export default function MyRecipesPage() {
         )}
       </div>
 
+      <button
+        type="button"
+        onClick={() =>
+          router.push(
+            "/create_recipe",
+          )
+        }
+        className="floatingAddRecipeButton"
+        aria-label="Add Recipe"
+      >
+        <Plus
+          size={30}
+          strokeWidth={2.4}
+        />
+
+        <span className="addRecipeTooltip">
+          Add Recipe
+        </span>
+      </button>
+
+      {recipeToDelete && (
+        <div
+          className="deleteModalOverlay"
+          role="presentation"
+          onMouseDown={closeDeleteModal}
+        >
+          <section
+            className="deleteModal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-modal-title"
+            aria-describedby="delete-modal-description"
+            onMouseDown={(event) =>
+              event.stopPropagation()
+            }
+          >
+            <div className="deleteModalIcon">
+              <Trash2 size={30} strokeWidth={2.2} />
+            </div>
+
+            <span className="deleteModalEyebrow">
+              Delete recipe
+            </span>
+
+            <h2 id="delete-modal-title">
+              Are you sure?
+            </h2>
+
+            <p id="delete-modal-description">
+              You are about to delete{" "}
+              <strong>
+                {recipeToDelete.title}
+              </strong>
+              . This action cannot be
+              undone.
+            </p>
+
+            {deleteErrorMessage && (
+              <div
+                className="deleteModalError"
+                role="alert"
+              >
+                {deleteErrorMessage}
+              </div>
+            )}
+
+            <div className="deleteModalActions">
+              <button
+                type="button"
+                disabled={Boolean(
+                  deletingRecipeId,
+                )}
+                onClick={
+                  closeDeleteModal
+                }
+                className="cancelDeleteButton"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                disabled={Boolean(
+                  deletingRecipeId,
+                )}
+                onClick={() => {
+                  void handleDeleteRecipe(
+                    recipeToDelete,
+                  );
+                }}
+                className="confirmDeleteButton"
+              >
+                {deletingRecipeId ? (
+                  <LoaderCircle
+                    size={18}
+                    className="buttonLoadingIcon"
+                  />
+                ) : (
+                  <Trash2 size={20} strokeWidth={2.2} />
+                )}
+
+                {deletingRecipeId
+                  ? "Deleting..."
+                  : "Delete Recipe"}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+
       <style jsx>{`
         .page {
           min-height: 100vh;
@@ -563,12 +770,22 @@ export default function MyRecipesPage() {
           background:
             radial-gradient(
               circle at top left,
-              rgba(255, 255, 255, 0.96),
+              rgba(
+                255,
+                255,
+                255,
+                0.96
+              ),
               transparent 28%
             ),
             radial-gradient(
               circle at bottom right,
-              rgba(217, 32, 69, 0.07),
+              rgba(
+                217,
+                32,
+                69,
+                0.07
+              ),
               transparent 32%
             ),
             #fff7ed;
@@ -588,20 +805,28 @@ export default function MyRecipesPage() {
           gap: 8px;
           margin-bottom: 25px;
           padding: 11px 17px;
-          border: 1px solid #ead7c4;
+          border: 1px solid
+            #ead7c4;
           border-radius: 999px;
           color: #8f0d25;
           background-color: #fffaf3;
           box-shadow: 0 8px 20px
-            rgba(95, 31, 35, 0.08);
+            rgba(
+              95,
+              31,
+              35,
+              0.08
+            );
           cursor: pointer;
+          font-family: inherit;
           font-weight: 700;
         }
 
         .pageHeader {
           display: flex;
           align-items: flex-end;
-          justify-content: space-between;
+          justify-content:
+            space-between;
           gap: 24px;
           margin-bottom: 30px;
         }
@@ -610,7 +835,8 @@ export default function MyRecipesPage() {
           display: block;
           margin-bottom: 8px;
           color: #b90f2f;
-          font-family: Georgia, serif;
+          font-family: Georgia,
+            serif;
           font-size: 13px;
           letter-spacing: 1.2px;
         }
@@ -618,7 +844,8 @@ export default function MyRecipesPage() {
         .pageHeader h1 {
           margin: 0 0 9px;
           color: #8f0d25;
-          font-family: Georgia, serif;
+          font-family: Georgia,
+            serif;
           font-size: clamp(
             40px,
             6vw,
@@ -637,20 +864,112 @@ export default function MyRecipesPage() {
           color: #b90f2f;
         }
 
-        .addRecipeButton,
-        .emptyAddButton {
-          display: inline-flex;
+        .floatingAddRecipeButton {
+          position: fixed;
+          right: 28px;
+          bottom: 28px;
+          z-index: 1000;
+
+          display: flex;
+          width: 60px;
+          height: 60px;
           align-items: center;
           justify-content: center;
-          gap: 9px;
-          padding: 14px 21px;
-          border-radius: 15px;
+
+          padding: 0;
+          border: none;
+          border-radius: 50%;
+
           color: white;
           background-color: #b90f2f;
-          box-shadow: 0 12px 27px
-            rgba(185, 15, 47, 0.22);
-          text-decoration: none;
+
+          box-shadow: 0 14px 30px
+            rgba(
+              185,
+              15,
+              47,
+              0.3
+            );
+
+          cursor: pointer;
+
+          transition:
+            transform 0.2s ease,
+            box-shadow 0.2s ease,
+            background-color 0.2s
+              ease;
+        }
+
+        .floatingAddRecipeButton:hover {
+          transform: translateY(-3px)
+            scale(1.04);
+
+          background-color: #9f0c28;
+
+          box-shadow: 0 18px 36px
+            rgba(
+              185,
+              15,
+              47,
+              0.38
+            );
+        }
+
+        .floatingAddRecipeButton:focus-visible {
+          outline: 3px solid
+            rgba(
+              185,
+              15,
+              47,
+              0.25
+            );
+
+          outline-offset: 4px;
+        }
+
+        .addRecipeTooltip {
+          position: absolute;
+          top: 50%;
+          right: calc(
+            100% + 12px
+          );
+
+          padding: 8px 13px;
+          border-radius: 999px;
+
+          color: white;
+          background-color: #5f1f23;
+
+          font-size: 13px;
           font-weight: 700;
+          white-space: nowrap;
+
+          opacity: 0;
+          visibility: hidden;
+          pointer-events: none;
+
+          transform: translate(
+            8px,
+            -50%
+          );
+
+          transition:
+            opacity 0.18s ease,
+            transform 0.18s ease,
+            visibility 0.18s ease;
+        }
+
+        .floatingAddRecipeButton:hover
+          .addRecipeTooltip,
+        .floatingAddRecipeButton:focus-visible
+          .addRecipeTooltip {
+          opacity: 1;
+          visibility: visible;
+
+          transform: translate(
+            0,
+            -50%
+          );
         }
 
         .message {
@@ -662,13 +981,17 @@ export default function MyRecipesPage() {
         }
 
         .successMessage {
-          border: 1px solid #cce6d1;
+          border: 1px solid
+            #cce6d1;
+
           color: #3f7b50;
           background-color: #edf7ee;
         }
 
         .errorMessage {
-          border: 1px solid #f1c4cb;
+          border: 1px solid
+            #f1c4cb;
+
           color: #b90f2f;
           background-color: #fff0f2;
         }
@@ -682,23 +1005,56 @@ export default function MyRecipesPage() {
 
         .recipeGrid {
           display: grid;
-          grid-template-columns: repeat(
-            auto-fit,
-            minmax(
-              min(285px, 100%),
-              1fr
-            )
-          );
+
+          grid-template-columns:
+            repeat(
+              auto-fit,
+              minmax(
+                min(
+                  285px,
+                  100%
+                ),
+                1fr
+              )
+            );
+
           gap: 24px;
         }
 
         .recipeCard {
+          display: flex;
           overflow: hidden;
-          border: 1px solid #ead7c4;
+          flex-direction: column;
+
+          border: 1px solid
+            #ead7c4;
+
           border-radius: 24px;
           background-color: #fffaf3;
+
           box-shadow: 0 17px 40px
-            rgba(95, 31, 35, 0.1);
+            rgba(
+              95,
+              31,
+              35,
+              0.1
+            );
+
+          transition:
+            transform 0.2s ease,
+            box-shadow 0.2s ease;
+        }
+
+        .recipeCard:hover {
+          transform: translateY(-3px);
+
+          box-shadow: 0 22px 48px
+            rgba(
+              95,
+              31,
+              35,
+              0.14
+            );
         }
 
         .imageWrapper {
@@ -718,18 +1074,31 @@ export default function MyRecipesPage() {
         .categoryBadge,
         .difficultyBadge {
           position: absolute;
+
           padding: 7px 12px;
+
           border: 1px solid
-            rgba(255, 255, 255, 0.75);
+            rgba(
+              255,
+              255,
+              255,
+              0.75
+            );
+
           border-radius: 999px;
           color: #8f0d25;
+
           background-color: rgba(
             255,
             250,
             243,
             0.93
           );
-          backdrop-filter: blur(7px);
+
+          backdrop-filter: blur(
+            7px
+          );
+
           font-size: 12px;
           font-weight: 700;
         }
@@ -745,12 +1114,16 @@ export default function MyRecipesPage() {
         }
 
         .cardContent {
+          display: flex;
+          flex: 1;
+          flex-direction: column;
           padding: 22px;
         }
 
         .cardDecoration {
           color: #b90f2f;
-          font-family: Georgia, serif;
+          font-family: Georgia,
+            serif;
           font-size: 12px;
           letter-spacing: 0.7px;
         }
@@ -758,7 +1131,8 @@ export default function MyRecipesPage() {
         .cardContent h2 {
           margin: 8px 0 10px;
           color: #8f0d25;
-          font-family: Georgia, serif;
+          font-family: Georgia,
+            serif;
           font-size: 24px;
           font-weight: 500;
           line-height: 1.35;
@@ -766,11 +1140,15 @@ export default function MyRecipesPage() {
 
         .description {
           display: -webkit-box;
+
           min-height: 49px;
           overflow: hidden;
+
           margin: 0 0 16px;
+
           color: #8a5c52;
           line-height: 1.6;
+
           -webkit-box-orient: vertical;
           -webkit-line-clamp: 2;
         }
@@ -780,9 +1158,12 @@ export default function MyRecipesPage() {
           align-items: center;
           gap: 13px;
           flex-wrap: wrap;
+
           padding: 14px 0;
+
           border-top: 1px dashed
             #ead7c4;
+
           border-bottom: 1px dashed
             #ead7c4;
         }
@@ -791,6 +1172,7 @@ export default function MyRecipesPage() {
           display: inline-flex;
           align-items: center;
           gap: 6px;
+
           color: #7c4a42;
           font-size: 13px;
           font-weight: 600;
@@ -798,10 +1180,17 @@ export default function MyRecipesPage() {
 
         .cardActions {
           display: grid;
+
           grid-template-columns:
-            1fr 1fr 44px;
+            repeat(
+              3,
+              minmax(0, 1fr)
+            );
+
           gap: 10px;
-          margin-top: 18px;
+
+          margin-top: auto;
+          padding-top: 18px;
         }
 
         .viewButton,
@@ -811,9 +1200,13 @@ export default function MyRecipesPage() {
           display: flex;
           align-items: center;
           justify-content: center;
+
           gap: 7px;
+          min-width: 0;
+
           padding: 12px 13px;
           border-radius: 13px;
+
           cursor: pointer;
           font-family: inherit;
           font-weight: 700;
@@ -825,18 +1218,88 @@ export default function MyRecipesPage() {
           background-color: #b90f2f;
         }
 
+        .viewButton:hover:not(
+            :disabled
+          ) {
+          background-color: #9f0c28;
+
+          box-shadow: 0 9px 20px
+            rgba(
+              185,
+              15,
+              47,
+              0.2
+            );
+
+          transform: translateY(-1px);
+        }
+
         .editButton {
-          border: 1px solid #b90f2f;
+          border: 1px solid
+            #b90f2f;
+
           color: #b90f2f;
           background-color: #fffaf3;
         }
 
-        .deleteButton {
-          border: 1px solid #efd1cf;
-          color: #b90f2f;
-          background-color: #fff0f2;
+        .editButton:hover:not(
+            :disabled
+          ) {
+          color: white;
+          background-color: #b90f2f;
+
+          box-shadow: 0 9px 20px
+            rgba(
+              185,
+              15,
+              47,
+              0.18
+            );
+
+          transform: translateY(-1px);
         }
 
+        .deleteButton {
+          border: 1px solid
+            #e6aeb4;
+
+          color: #a70d28;
+          background-color: #fff3f4;
+        }
+
+        .deleteButton:hover:not(
+            :disabled
+          ) {
+          border-color: #b90f2f;
+
+          color: white;
+          background-color: #b90f2f;
+
+          box-shadow: 0 9px 20px
+            rgba(
+              185,
+              15,
+              47,
+              0.2
+            );
+
+          transform: translateY(-1px);
+        }
+
+        .viewButton,
+        .editButton,
+        .deleteButton {
+          transition:
+            color 0.2s ease,
+            border-color 0.2s ease,
+            background-color 0.2s
+              ease,
+            box-shadow 0.2s ease,
+            transform 0.2s ease;
+        }
+
+        .viewButton:disabled,
+        .editButton:disabled,
         .deleteButton:disabled {
           cursor: not-allowed;
           opacity: 0.65;
@@ -845,14 +1308,26 @@ export default function MyRecipesPage() {
         .statusCard {
           max-width: 680px;
           box-sizing: border-box;
+
           margin: 30px auto 0;
           padding: 45px 28px;
-          border: 1px solid #ead7c4;
+
+          border: 1px solid
+            #ead7c4;
+
           border-radius: 27px;
+
           color: #8a5c52;
           background-color: #fffaf3;
+
           box-shadow: 0 18px 45px
-            rgba(95, 31, 35, 0.1);
+            rgba(
+              95,
+              31,
+              35,
+              0.1
+            );
+
           text-align: center;
         }
 
@@ -863,7 +1338,8 @@ export default function MyRecipesPage() {
         .statusCard h2 {
           margin: 15px 0 8px;
           color: #8f0d25;
-          font-family: Georgia, serif;
+          font-family: Georgia,
+            serif;
           font-size: 27px;
         }
 
@@ -879,14 +1355,265 @@ export default function MyRecipesPage() {
           background-color: #b90f2f;
         }
 
+        .deleteModalOverlay {
+          position: fixed;
+          inset: 0;
+          z-index: 3000;
+
+          display: grid;
+          place-items: center;
+
+          box-sizing: border-box;
+          padding: 20px;
+
+          background-color: rgba(
+            55,
+            20,
+            24,
+            0.5
+          );
+
+          backdrop-filter: blur(
+            5px
+          );
+
+          animation: modalFadeIn
+            0.18s ease;
+        }
+
+        .deleteModal {
+          width: 100%;
+          max-width: 430px;
+          box-sizing: border-box;
+
+          padding: 34px;
+
+          border: 1px solid
+            #ead7c4;
+
+          border-radius: 26px;
+
+          color: #5f1f23;
+          background-color: #fffaf3;
+
+          box-shadow: 0 28px 70px
+            rgba(
+              55,
+              20,
+              24,
+              0.28
+            );
+
+          text-align: center;
+
+          animation: modalScaleIn
+            0.2s ease;
+        }
+
+        .deleteModalIcon {
+          width: 66px;
+          height: 66px;
+
+          display: flex;
+          align-items: center;
+          justify-content: center;
+
+          margin: 0 auto 17px;
+
+          border-radius: 50%;
+
+          color: #b90f2f;
+          background-color: #ffe7e9;
+        }
+
+        .deleteModalEyebrow {
+          display: block;
+
+          margin-bottom: 7px;
+
+          color: #b90f2f;
+
+          font-family: Georgia,
+            serif;
+
+          font-size: 12px;
+          font-weight: 700;
+
+          letter-spacing: 1px;
+          text-transform: uppercase;
+        }
+
+        .deleteModal h2 {
+          margin: 0 0 12px;
+
+          color: #8f0d25;
+
+          font-family: Georgia,
+            serif;
+
+          font-size: 31px;
+          font-weight: 500;
+        }
+
+        .deleteModal p {
+          margin: 0;
+          color: #8a5c52;
+          line-height: 1.7;
+        }
+
+        .deleteModal p strong {
+          color: #8f0d25;
+        }
+
+        .deleteModalError {
+          margin-top: 16px;
+
+          padding: 11px 13px;
+
+          border: 1px solid
+            #f1c4cb;
+
+          border-radius: 12px;
+
+          color: #b90f2f;
+          background-color: #fff0f2;
+
+          font-size: 13px;
+          font-weight: 600;
+          line-height: 1.5;
+        }
+
+        .deleteModalActions {
+          display: grid;
+
+          grid-template-columns:
+            repeat(
+              2,
+              minmax(0, 1fr)
+            );
+
+          gap: 12px;
+          margin-top: 27px;
+        }
+
+        .cancelDeleteButton,
+        .confirmDeleteButton {
+          min-height: 48px;
+
+          display: flex;
+          align-items: center;
+          justify-content: center;
+
+          gap: 8px;
+          padding: 12px 17px;
+
+          border-radius: 14px;
+
+          cursor: pointer;
+          font-family: inherit;
+          font-weight: 800;
+
+          transition:
+            transform 0.2s ease,
+            box-shadow 0.2s ease,
+            background-color 0.2s
+              ease;
+        }
+
+        .cancelDeleteButton {
+          border: 1px solid
+            #d8c4b3;
+
+          color: #7c4a42;
+          background-color: #fffdf9;
+        }
+
+        .cancelDeleteButton:hover:not(
+            :disabled
+          ) {
+          background-color: #f8ede3;
+        }
+
+        .confirmDeleteButton {
+          border: none;
+
+          color: white;
+          background-color: #b90f2f;
+
+          box-shadow: 0 11px 24px
+            rgba(
+              185,
+              15,
+              47,
+              0.24
+            );
+        }
+
+        .confirmDeleteButton:hover:not(
+            :disabled
+          ) {
+          transform: translateY(-1px);
+
+          background-color: #9f0c28;
+
+          box-shadow: 0 15px 29px
+            rgba(
+              185,
+              15,
+              47,
+              0.3
+            );
+        }
+
+        .cancelDeleteButton:disabled,
+        .confirmDeleteButton:disabled {
+          cursor: not-allowed;
+          opacity: 0.65;
+        }
+
+        @keyframes modalFadeIn {
+          from {
+            opacity: 0;
+          }
+
+          to {
+            opacity: 1;
+          }
+        }
+
+        @keyframes modalScaleIn {
+          from {
+            opacity: 0;
+
+            transform: translateY(
+                10px
+              )
+              scale(0.97);
+          }
+
+          to {
+            opacity: 1;
+
+            transform: translateY(
+                0
+              )
+              scale(1);
+          }
+        }
+
         :global(.loadingIcon),
-        :global(.buttonLoadingIcon) {
-          animation: spin 0.9s linear infinite;
+        :global(
+          .buttonLoadingIcon
+        ) {
+          animation: spin 0.9s
+            linear infinite;
         }
 
         @keyframes spin {
           to {
-            transform: rotate(360deg);
+            transform: rotate(
+              360deg
+            );
           }
         }
 
@@ -895,24 +1622,83 @@ export default function MyRecipesPage() {
             align-items: flex-start;
             flex-direction: column;
           }
-
-          .addRecipeButton {
-            width: 100%;
-            box-sizing: border-box;
-          }
         }
 
-        @media (max-width: 480px) {
+        @media (max-width: 560px) {
           .pageContainer {
-            padding: 30px 14px 60px;
+            padding: 30px 14px
+              86px;
           }
 
           .cardActions {
-            grid-template-columns: 1fr;
+            grid-template-columns:
+              repeat(
+                2,
+                minmax(0, 1fr)
+              );
           }
 
           .deleteButton {
-            width: 100%;
+            grid-column: 1 / -1;
+          }
+
+          .floatingAddRecipeButton {
+            right: 16px;
+
+            bottom: max(
+              16px,
+              env(
+                safe-area-inset-bottom
+              )
+            );
+
+            width: 54px;
+            height: 54px;
+          }
+
+          .addRecipeTooltip {
+            display: none;
+          }
+
+          .deleteModal {
+            padding: 28px 20px;
+            border-radius: 22px;
+          }
+
+          .deleteModalActions {
+            grid-template-columns:
+              1fr;
+          }
+
+          .confirmDeleteButton {
+            grid-row: 1;
+          }
+
+          .cancelDeleteButton {
+            grid-row: 2;
+          }
+        }
+
+        @media (
+          prefers-reduced-motion:
+            reduce
+        ) {
+          .recipeCard,
+          .floatingAddRecipeButton,
+          .viewButton,
+          .editButton,
+          .deleteButton,
+          .deleteModalOverlay,
+          .deleteModal {
+            animation: none;
+            transition: none;
+          }
+
+          :global(.loadingIcon),
+          :global(
+            .buttonLoadingIcon
+          ) {
+            animation-duration: 1.8s;
           }
         }
       `}</style>
@@ -925,7 +1711,9 @@ function removeRecipeFromWatchlist(
 ): void {
   try {
     const storedWatchlist =
-      localStorage.getItem("watchlist");
+      localStorage.getItem(
+        "watchlist",
+      );
 
     if (!storedWatchlist) {
       return;
@@ -934,32 +1722,44 @@ function removeRecipeFromWatchlist(
     const parsedWatchlist: unknown =
       JSON.parse(storedWatchlist);
 
-    if (!Array.isArray(parsedWatchlist)) {
+    if (
+      !Array.isArray(
+        parsedWatchlist,
+      )
+    ) {
       return;
     }
 
     const updatedWatchlist =
-      parsedWatchlist.filter((item) => {
-        if (
-          typeof item !== "object" ||
-          item === null
-        ) {
-          return true;
-        }
+      parsedWatchlist.filter(
+        (item) => {
+          if (
+            typeof item !==
+            "object" ||
+            item === null
+          ) {
+            return true;
+          }
 
-        const savedItem = item as {
-          id?: unknown;
-        };
+          const savedItem =
+            item as {
+              id?: unknown;
+            };
 
-        return (
-          String(savedItem.id) !==
-          String(recipeId)
-        );
-      });
+          return (
+            String(
+              savedItem.id,
+            ) !==
+            String(recipeId)
+          );
+        },
+      );
 
     localStorage.setItem(
       "watchlist",
-      JSON.stringify(updatedWatchlist),
+      JSON.stringify(
+        updatedWatchlist,
+      ),
     );
 
     localStorage.removeItem(
@@ -990,29 +1790,39 @@ function LoadingPage({
       <style jsx>{`
         .loadingPage {
           min-height: 100vh;
+
           display: flex;
           flex-direction: column;
           align-items: center;
           justify-content: center;
+
           gap: 14px;
+
           color: #8a5c52;
           background-color: #fff7ed;
         }
 
         .loadingPage p {
           margin: 0;
-          font-family: Georgia, serif;
+
+          font-family: Georgia,
+            serif;
+
           font-size: 17px;
         }
 
         :global(.loadingIcon) {
           color: #b90f2f;
-          animation: spin 0.9s linear infinite;
+
+          animation: spin 0.9s
+            linear infinite;
         }
 
         @keyframes spin {
           to {
-            transform: rotate(360deg);
+            transform: rotate(
+              360deg
+            );
           }
         }
       `}</style>

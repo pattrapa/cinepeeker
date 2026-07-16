@@ -1,5 +1,6 @@
 import mongoose, {
   Schema,
+  Types,
   type Model,
 } from "mongoose";
 
@@ -18,99 +19,177 @@ export interface IRecipe {
   imageUrl: string;
   ingredients: string[];
   steps: string[];
+
+  ownerId?: Types.ObjectId;
   authorName: string;
+
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
-const recipeSchema = new Schema<IRecipe>(
-  {
-    title: {
-      type: String,
-      required: [true, "Recipe title is required."],
-      trim: true,
-      maxlength: [120, "Recipe title is too long."],
-    },
-
-    category: {
-      type: String,
-      required: [true, "Category is required."],
-      trim: true,
-    },
-
-    timeMinutes: {
-      type: Number,
-      required: [true, "Cooking time is required."],
-      min: [1, "Cooking time must be at least 1 minute."],
-    },
-
-    difficulty: {
-      type: String,
-      required: [true, "Difficulty is required."],
-      enum: {
-        values: ["Easy", "Medium", "Hard"],
-        message: "Difficulty must be Easy, Medium or Hard.",
+const recipeSchema =
+  new Schema<IRecipe>(
+    {
+      title: {
+        type: String,
+        required: [
+          true,
+          "Recipe title is required.",
+        ],
+        trim: true,
+        maxlength: [
+          120,
+          "Recipe title is too long.",
+        ],
       },
-    },
 
-    servings: {
-      type: Number,
-      required: [true, "Servings are required."],
-      min: [1, "Servings must be at least 1."],
-    },
+      category: {
+        type: String,
+        required: [
+          true,
+          "Category is required.",
+        ],
+        trim: true,
+      },
 
-    description: {
-      type: String,
-      required: [true, "Description is required."],
-      trim: true,
-      maxlength: [2000, "Description is too long."],
-    },
+      timeMinutes: {
+        type: Number,
+        required: [
+          true,
+          "Cooking time is required.",
+        ],
+        min: [
+          1,
+          "Cooking time must be at least 1 minute.",
+        ],
+      },
 
-    imageUrl: {
-      type: String,
-      required: [true, "Recipe image is required."],
-      trim: true,
-    },
+      difficulty: {
+        type: String,
+        required: [
+          true,
+          "Difficulty is required.",
+        ],
+        enum: {
+          values: [
+            "Easy",
+            "Medium",
+            "Hard",
+          ],
 
-    ingredients: {
-      type: [String],
-      required: true,
-      validate: {
-        validator(values: string[]) {
-          return values.length > 0;
+          message:
+            "Difficulty must be Easy, Medium or Hard.",
         },
-        message: "At least one ingredient is required.",
       },
-    },
 
-    steps: {
-      type: [String],
-      required: true,
-      validate: {
-        validator(values: string[]) {
-          return values.length > 0;
+      servings: {
+        type: Number,
+        required: [
+          true,
+          "Servings are required.",
+        ],
+        min: [
+          1,
+          "Servings must be at least 1.",
+        ],
+      },
+
+      description: {
+        type: String,
+        required: [
+          true,
+          "Description is required.",
+        ],
+        trim: true,
+        maxlength: [
+          2000,
+          "Description is too long.",
+        ],
+      },
+
+      imageUrl: {
+        type: String,
+        required: [
+          true,
+          "Recipe image is required.",
+        ],
+        trim: true,
+      },
+
+      ingredients: {
+        type: [String],
+        required: true,
+
+        validate: {
+          validator(
+            values: string[],
+          ) {
+            return values.length > 0;
+          },
+
+          message:
+            "At least one ingredient is required.",
         },
-        message: "At least one cooking step is required.",
+      },
+
+      steps: {
+        type: [String],
+        required: true,
+
+        validate: {
+          validator(
+            values: string[],
+          ) {
+            return values.length > 0;
+          },
+
+          message:
+            "At least one cooking step is required.",
+        },
+      },
+
+      /*
+       * ยังไม่ตั้ง required เพื่อให้ Recipe เก่า
+       * ที่ไม่มี ownerId สามารถอยู่ต่อได้
+       *
+       * หลัง Emmy Login ครั้งแรก ระบบจะเติม
+       * ownerId ให้อัตโนมัติ
+       */
+      ownerId: {
+        type: Schema.Types.ObjectId,
+        ref: "User",
+        index: true,
+      },
+
+      authorName: {
+        type: String,
+        trim: true,
+        default:
+          "RecipePeeker User",
       },
     },
+    {
+      timestamps: true,
+      versionKey: false,
 
-    authorName: {
-      type: String,
-      trim: true,
-      default: "RecipePeeker User",
+      toJSON: {
+        virtuals: true,
+      },
     },
-  },
-  {
-    timestamps: true,
-    versionKey: false,
-    toJSON: {
-      virtuals: true,
-    },
-  },
-);
+  );
+
+recipeSchema.index({
+  ownerId: 1,
+  createdAt: -1,
+});
 
 const RecipeModel: Model<IRecipe> =
   (mongoose.models.Recipe as
     | Model<IRecipe>
     | undefined) ??
-  mongoose.model<IRecipe>("Recipe", recipeSchema);
+  mongoose.model<IRecipe>(
+    "Recipe",
+    recipeSchema,
+  );
 
 export default RecipeModel;

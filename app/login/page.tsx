@@ -1,9 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { signIn } from "next-auth/react";
 import Image from "next/image";
+
+import {
+  useRouter,
+  useSearchParams,
+} from "next/navigation";
+
+import {
+  signIn,
+} from "next-auth/react";
+
 import {
   Heart,
   LockKeyhole,
@@ -13,131 +21,240 @@ import {
 
 export default function LoginPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const searchParams =
+    useSearchParams();
 
-  const redirectPath = searchParams.get("redirect") || "/";
+  const redirectPath =
+    searchParams.get("redirect") ||
+    "/";
 
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] =
+    useState("");
 
-  const [message, setMessage] = useState("");
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [password, setPassword] =
+    useState("");
 
-  const [errors, setErrors] = useState({
-    email: false,
-    password: false,
-  });
+  const [message, setMessage] =
+    useState("");
 
-  const handleLogin = (event: React.FormEvent<HTMLFormElement>) => {
+  const [
+    isGoogleLoading,
+    setIsGoogleLoading,
+  ] = useState(false);
+
+  const [
+    isCredentialsLoading,
+    setIsCredentialsLoading,
+  ] = useState(false);
+
+  const [errors, setErrors] =
+    useState({
+      email: false,
+      password: false,
+    });
+
+  const isLoading =
+    isGoogleLoading ||
+    isCredentialsLoading;
+
+  const handleLogin = async (
+    event: React.FormEvent<HTMLFormElement>,
+  ) => {
     event.preventDefault();
 
-    const trimmedEmail = email.trim();
-    const trimmedPassword = password.trim();
+    const trimmedEmail =
+      email.trim().toLowerCase();
+
+    const trimmedPassword =
+      password;
 
     const newErrors = {
-      email: trimmedEmail === "",
-      password: trimmedPassword === "",
+      email:
+        trimmedEmail === "",
+
+      password:
+        trimmedPassword === "",
     };
 
     setErrors(newErrors);
+    setMessage("");
 
-    if (newErrors.email || newErrors.password) {
-      setMessage("Please fill in email and password.");
+    if (
+      newErrors.email ||
+      newErrors.password
+    ) {
+      setMessage(
+        "Please fill in email and password.",
+      );
+
       return;
     }
 
-    const correctEmail = "user@example.com";
-    const correctPassword = "123456";
+    try {
+      setIsCredentialsLoading(true);
 
-    if (
-      trimmedEmail !== correctEmail ||
-      trimmedPassword !== correctPassword
-    ) {
+      const result = await signIn(
+        "credentials",
+        {
+          email:
+            trimmedEmail,
+
+          password:
+            trimmedPassword,
+
+          redirect:
+            false,
+        },
+      );
+
+      if (
+        !result ||
+        result.error
+      ) {
+        throw new Error(
+          "Email or password is incorrect.",
+        );
+      }
+
+      setErrors({
+        email: false,
+        password: false,
+      });
+
+      setMessage(
+        "Login successful! Welcome back to RecipePeeker.",
+      );
+
+      router.push(redirectPath);
+      router.refresh();
+    } catch (error) {
+      console.error(
+        "Credentials login error:",
+        error,
+      );
+
       setErrors({
         email: true,
         password: true,
       });
 
-      setMessage("Email or password is incorrect.");
-      return;
-    }
-
-    setErrors({
-      email: false,
-      password: false,
-    });
-
-    localStorage.setItem("isLoggedIn", "true");
-    localStorage.setItem("loginMethod", "mock");
-
-    setMessage(
-      "Login successful! Welcome back to RecipePeeker."
-    );
-
-    setTimeout(() => {
-      router.push(redirectPath);
-    }, 800);
-  };
-
-  const handleGoogleLogin = async () => {
-    try {
-      setIsGoogleLoading(true);
-      setMessage("");
-
-      await signIn("google", {
-        redirectTo: redirectPath,
-      });
-    } catch (error) {
-      console.error("Google login error:", error);
-
-      setIsGoogleLoading(false);
       setMessage(
-        "Unable to login with Google. Please try again."
+        error instanceof Error
+          ? error.message
+          : "Unable to login.",
+      );
+    } finally {
+      setIsCredentialsLoading(
+        false,
       );
     }
   };
 
+  const handleGoogleLogin =
+    async () => {
+      try {
+        setIsGoogleLoading(true);
+        setMessage("");
+
+        await signIn(
+          "google",
+          {
+            redirectTo:
+              redirectPath,
+          },
+        );
+      } catch (error) {
+        console.error(
+          "Google login error:",
+          error,
+        );
+
+        setMessage(
+          "Unable to login with Google. Please try again.",
+        );
+
+        setIsGoogleLoading(
+          false,
+        );
+      }
+    };
+
   const registerHref =
     redirectPath === "/"
       ? "/register"
-      : `/register?redirect=${encodeURIComponent(redirectPath)}`;
+      : `/register?redirect=${encodeURIComponent(
+          redirectPath,
+        )}`;
 
-  const isSuccess = message.includes("successful");
-  const logoImageStyle: React.CSSProperties = {
-    width: "76px",
-    height: "76px",
-    objectFit: "contain",
-  };
+  const isSuccess =
+    message.includes(
+      "successful",
+    );
+
+  const logoImageStyle:
+    React.CSSProperties = {
+      width: "76px",
+      height: "76px",
+      objectFit: "contain",
+    };
 
   return (
     <main className="page">
       <section className="authContainer">
-        {/* Login form */}
         <div className="formSection">
-          <div style={{ marginBottom: "28px" }}>
-            <span style={smallDecorationStyle}>
+          <div
+            style={{
+              marginBottom:
+                "28px",
+            }}
+          >
+            <span
+              style={
+                smallDecorationStyle
+              }
+            >
               ❦ Welcome back ❦
             </span>
 
-            <h1 style={headingStyle}>Login</h1>
+            <h1
+              style={headingStyle}
+            >
+              Login
+            </h1>
 
-            <p style={descriptionStyle}>
-              Login to save your favorite recipes and continue
-              your cozy cooking journey.
+            <p
+              style={
+                descriptionStyle
+              }
+            >
+              Login to save your
+              favorite recipes and
+              continue your cozy
+              cooking journey.
             </p>
           </div>
 
-          {/* Google Login */}
           <button
             type="button"
-            onClick={handleGoogleLogin}
-            disabled={isGoogleLoading}
+            onClick={
+              handleGoogleLogin
+            }
+            disabled={isLoading}
+            aria-busy={
+              isGoogleLoading
+            }
             style={{
               ...googleButtonStyle,
-              cursor: isGoogleLoading
-                ? "not-allowed"
-                : "pointer",
-              opacity: isGoogleLoading ? 0.7 : 1,
+
+              cursor:
+                isLoading
+                  ? "not-allowed"
+                  : "pointer",
+
+              opacity:
+                isLoading
+                  ? 0.7
+                  : 1,
             }}
           >
             <GoogleIcon />
@@ -149,79 +266,120 @@ export default function LoginPage() {
             </span>
           </button>
 
-          <div style={dividerContainerStyle}>
-            <span style={dividerLineStyle} />
+          <div
+            style={
+              dividerContainerStyle
+            }
+          >
+            <span
+              style={
+                dividerLineStyle
+              }
+            />
 
-            <span style={dividerTextStyle}>or</span>
+            <span
+              style={
+                dividerTextStyle
+              }
+            >
+              or
+            </span>
 
-            <span style={dividerLineStyle} />
+            <span
+              style={
+                dividerLineStyle
+              }
+            />
           </div>
 
-          <div style={demoAccountStyle}>
-            <Sparkles size={18} color="#b90f2f" />
+          <form
+            onSubmit={
+              handleLogin
+            }
+          >
+            <label
+              htmlFor="email"
+              style={labelStyle}
+            >
+              Email
+            </label>
 
-            <div>
-              <div
-                style={{
-                  color: "#8f0d25",
-                  fontWeight: "700",
-                  marginBottom: "3px",
-                }}
-              >
-                Demo account
-              </div>
-
-              <div style={{ color: "#8a5c52" }}>
-                <strong>user@example.com</strong> /{" "}
-                <strong>123456</strong>
-              </div>
-            </div>
-          </div>
-
-          <form onSubmit={handleLogin}>
-            <label style={labelStyle}>Email</label>
-
-            <div style={inputWrapperStyle}>
+            <div
+              style={
+                inputWrapperStyle
+              }
+            >
               <Mail
                 size={19}
                 color={
-                  errors.email ? "#d92045" : "#9a6b5f"
+                  errors.email
+                    ? "#d92045"
+                    : "#9a6b5f"
                 }
-                style={inputIconStyle}
+                style={
+                  inputIconStyle
+                }
               />
 
               <input
+                id="email"
                 type="email"
+                autoComplete="email"
                 placeholder="you@example.com"
                 value={email}
-                onChange={(event) => {
-                  setEmail(event.target.value);
+                disabled={isLoading}
+                onChange={(
+                  event,
+                ) => {
+                  setEmail(
+                    event.target
+                      .value,
+                  );
+
                   setMessage("");
 
-                  setErrors((previousErrors) => ({
-                    ...previousErrors,
-                    email: false,
-                  }));
+                  setErrors(
+                    (
+                      previousErrors,
+                    ) => ({
+                      ...previousErrors,
+                      email:
+                        false,
+                    }),
+                  );
                 }}
                 style={{
                   ...inputStyle,
-                  border: errors.email
-                    ? "1px solid #d92045"
-                    : "1px solid #ead7c4",
+
+                  border:
+                    errors.email
+                      ? "1px solid #d92045"
+                      : "1px solid #ead7c4",
+
+                  opacity:
+                    isLoading
+                      ? 0.75
+                      : 1,
                 }}
               />
             </div>
 
             <label
+              htmlFor="password"
               style={{
                 ...labelStyle,
-                marginTop: "19px",
+                marginTop:
+                  "19px",
               }}
             >
               Password
             </label>
 
-            <div style={inputWrapperStyle}>
+            <div
+              style={
+                inputWrapperStyle
+              }
+            >
               <LockKeyhole
                 size={19}
                 color={
@@ -229,42 +387,93 @@ export default function LoginPage() {
                     ? "#d92045"
                     : "#9a6b5f"
                 }
-                style={inputIconStyle}
+                style={
+                  inputIconStyle
+                }
               />
 
               <input
+                id="password"
                 type="password"
+                autoComplete="current-password"
                 placeholder="Enter your password"
                 value={password}
-                onChange={(event) => {
-                  setPassword(event.target.value);
+                disabled={isLoading}
+                onChange={(
+                  event,
+                ) => {
+                  setPassword(
+                    event.target
+                      .value,
+                  );
+
                   setMessage("");
 
-                  setErrors((previousErrors) => ({
-                    ...previousErrors,
-                    password: false,
-                  }));
+                  setErrors(
+                    (
+                      previousErrors,
+                    ) => ({
+                      ...previousErrors,
+                      password:
+                        false,
+                    }),
+                  );
                 }}
                 style={{
                   ...inputStyle,
-                  border: errors.password
-                    ? "1px solid #d92045"
-                    : "1px solid #ead7c4",
+
+                  border:
+                    errors.password
+                      ? "1px solid #d92045"
+                      : "1px solid #ead7c4",
+
+                  opacity:
+                    isLoading
+                      ? 0.75
+                      : 1,
                 }}
               />
             </div>
 
             <button
               type="submit"
-              style={primaryButtonStyle}
-              onMouseEnter={(event) => {
+              disabled={isLoading}
+              aria-busy={
+                isCredentialsLoading
+              }
+              style={{
+                ...primaryButtonStyle,
+
+                cursor:
+                  isLoading
+                    ? "not-allowed"
+                    : "pointer",
+
+                opacity:
+                  isLoading
+                    ? 0.7
+                    : 1,
+              }}
+              onMouseEnter={(
+                event,
+              ) => {
+                if (
+                  event
+                    .currentTarget
+                    .disabled
+                ) {
+                  return;
+                }
+
                 event.currentTarget.style.backgroundColor =
                   "#8f0d25";
 
                 event.currentTarget.style.transform =
                   "translateY(-1px)";
               }}
-              onMouseLeave={(event) => {
+              onMouseLeave={(
+                event,
+              ) => {
                 event.currentTarget.style.backgroundColor =
                   "#b90f2f";
 
@@ -272,22 +481,35 @@ export default function LoginPage() {
                   "translateY(0)";
               }}
             >
-              Login
+              {isCredentialsLoading
+                ? "Logging in..."
+                : "Login"}
             </button>
 
             {message && (
               <p
+                role={
+                  isSuccess
+                    ? "status"
+                    : "alert"
+                }
                 style={{
                   ...messageStyle,
-                  color: isSuccess
-                    ? "#3f7b50"
-                    : "#b90f2f",
-                  backgroundColor: isSuccess
-                    ? "#edf7ee"
-                    : "#fff0f2",
-                  border: isSuccess
-                    ? "1px solid #cce6d1"
-                    : "1px solid #f1c4cb",
+
+                  color:
+                    isSuccess
+                      ? "#3f7b50"
+                      : "#b90f2f",
+
+                  backgroundColor:
+                    isSuccess
+                      ? "#edf7ee"
+                      : "#fff0f2",
+
+                  border:
+                    isSuccess
+                      ? "1px solid #cce6d1"
+                      : "1px solid #f1c4cb",
                 }}
               >
                 {message}
@@ -295,51 +517,103 @@ export default function LoginPage() {
             )}
           </form>
 
-          <p style={bottomTextStyle}>
-            Don&apos;t have an account?{" "}
-            <a href={registerHref} style={linkStyle}>
+          <p
+            style={
+              bottomTextStyle
+            }
+          >
+            Don&apos;t have an
+            account?{" "}
+
+            <a
+              href={registerHref}
+              style={linkStyle}
+            >
               Create Account
             </a>
           </p>
         </div>
 
-        {/* Decorative panel */}
         <div className="visualSection">
-          <div style={topSymbolStyle}>✧ ❦ ✧</div>
+          <div
+            style={
+              topSymbolStyle
+            }
+          >
+            ✧ ❦ ✧
+          </div>
 
-          <div style={largeIconContainerStyle}>
+          <div
+            style={
+              largeIconContainerStyle
+            }
+          >
             <Image
               src="/cook2.png"
               alt="RecipePeeker logo"
               width={76}
               height={76}
               priority
-              style={logoImageStyle}
+              style={
+                logoImageStyle
+              }
             />
           </div>
 
-          <h2 style={visualHeadingStyle}>
+          <h2
+            style={
+              visualHeadingStyle
+            }
+          >
             RecipePeeker
           </h2>
 
-          <p style={visualTextStyle}>
-            Discover recipes made for sweet mornings, cozy
-            evenings and memorable meals.
+          <p
+            style={
+              visualTextStyle
+            }
+          >
+            Discover recipes made
+            for sweet mornings,
+            cozy evenings and
+            memorable meals.
           </p>
 
-          <div style={featureListStyle}>
-            <div style={featureItemStyle}>
+          <div
+            style={
+              featureListStyle
+            }
+          >
+            <div
+              style={
+                featureItemStyle
+              }
+            >
               <Heart size={18} />
-              Save your favorite recipes
+              Save your favorite
+              recipes
             </div>
 
-            <div style={featureItemStyle}>
-              <Sparkles size={18} />
-              Find inspiration for every meal
+            <div
+              style={
+                featureItemStyle
+              }
+            >
+              <Sparkles
+                size={18}
+              />
+              Find inspiration for
+              every meal
             </div>
           </div>
 
-          <div style={bottomSymbolStyle}>❧ ♡ ❦</div>
+          <div
+            style={
+              bottomSymbolStyle
+            }
+          >
+            ❧ ♡ ❦
+          </div>
         </div>
       </section>
 
@@ -354,12 +628,22 @@ export default function LoginPage() {
           background:
             radial-gradient(
               circle at top left,
-              rgba(255, 255, 255, 0.95),
+              rgba(
+                255,
+                255,
+                255,
+                0.95
+              ),
               transparent 32%
             ),
             radial-gradient(
               circle at bottom right,
-              rgba(217, 32, 69, 0.08),
+              rgba(
+                217,
+                32,
+                69,
+                0.08
+              ),
               transparent 30%
             ),
             #fff7ed;
@@ -370,13 +654,22 @@ export default function LoginPage() {
           max-width: 1060px;
           min-height: 690px;
           display: grid;
-          grid-template-columns: 1fr 0.9fr;
+          grid-template-columns:
+            1fr 0.9fr;
           overflow: hidden;
-          border: 1px solid #ead7c4;
+          border: 1px solid
+            #ead7c4;
           border-radius: 32px;
-          background-color: #fffaf3;
-          box-shadow: 0 28px 80px
-            rgba(95, 31, 35, 0.14);
+          background-color:
+            #fffaf3;
+          box-shadow:
+            0 28px 80px
+            rgba(
+              95,
+              31,
+              35,
+              0.14
+            );
         }
 
         .formSection {
@@ -384,7 +677,8 @@ export default function LoginPage() {
           flex-direction: column;
           justify-content: center;
           padding: 48px 62px;
-          background-color: #fffaf3;
+          background-color:
+            #fffaf3;
         }
 
         .visualSection {
@@ -397,11 +691,12 @@ export default function LoginPage() {
           padding: 50px;
           color: white;
           text-align: center;
-          background: linear-gradient(
-            145deg,
-            #8f0d25,
-            #c71438
-          );
+          background:
+            linear-gradient(
+              145deg,
+              #8f0d25,
+              #c71438
+            );
         }
 
         .visualSection::before,
@@ -411,7 +706,12 @@ export default function LoginPage() {
           width: 180px;
           height: 180px;
           border: 2px solid
-            rgba(255, 255, 255, 0.16);
+            rgba(
+              255,
+              255,
+              255,
+              0.16
+            );
           border-radius: 50%;
         }
 
@@ -425,14 +725,17 @@ export default function LoginPage() {
           left: -70px;
         }
 
-        @media (max-width: 850px) {
+        @media (
+          max-width: 850px
+        ) {
           .page {
             padding: 20px;
           }
 
           .authContainer {
             max-width: 620px;
-            grid-template-columns: 1fr;
+            grid-template-columns:
+              1fr;
           }
 
           .formSection {
@@ -445,7 +748,9 @@ export default function LoginPage() {
           }
         }
 
-        @media (max-width: 480px) {
+        @media (
+          max-width: 480px
+        ) {
           .page {
             padding: 12px;
           }
@@ -498,209 +803,242 @@ function GoogleIcon() {
   );
 }
 
-const smallDecorationStyle: React.CSSProperties = {
-  display: "block",
-  marginBottom: "10px",
-  color: "#b90f2f",
-  fontFamily: "Georgia, serif",
-  fontSize: "14px",
-  letterSpacing: "1.5px",
-};
+const smallDecorationStyle:
+  React.CSSProperties = {
+    display: "block",
+    marginBottom: "10px",
+    color: "#b90f2f",
+    fontFamily:
+      "Georgia, serif",
+    fontSize: "14px",
+    letterSpacing: "1.5px",
+  };
 
-const headingStyle: React.CSSProperties = {
-  margin: "0 0 10px",
-  color: "#8f0d25",
-  fontFamily: "Georgia, serif",
-  fontSize: "40px",
-  lineHeight: "1.15",
-};
+const headingStyle:
+  React.CSSProperties = {
+    margin: "0 0 10px",
+    color: "#8f0d25",
+    fontFamily:
+      "Georgia, serif",
+    fontSize: "40px",
+    lineHeight: "1.15",
+  };
 
-const descriptionStyle: React.CSSProperties = {
-  maxWidth: "480px",
-  margin: 0,
-  color: "#8a5c52",
-  fontSize: "15.5px",
-  lineHeight: "1.75",
-};
+const descriptionStyle:
+  React.CSSProperties = {
+    maxWidth: "480px",
+    margin: 0,
+    color: "#8a5c52",
+    fontSize: "15.5px",
+    lineHeight: "1.75",
+  };
 
-const googleButtonStyle: React.CSSProperties = {
-  width: "100%",
-  boxSizing: "border-box",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  gap: "11px",
-  padding: "14px 18px",
-  border: "1px solid #ead7c4",
-  borderRadius: "14px",
-  color: "#5f1f23",
-  backgroundColor: "#fffdf9",
-  boxShadow: "0 7px 18px rgba(95, 31, 35, 0.07)",
-  fontSize: "15px",
-  fontWeight: "700",
-  transition:
-    "border-color 0.2s ease, transform 0.2s ease",
-};
+const googleButtonStyle:
+  React.CSSProperties = {
+    width: "100%",
+    boxSizing: "border-box",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "11px",
+    padding: "14px 18px",
+    border:
+      "1px solid #ead7c4",
+    borderRadius: "14px",
+    color: "#5f1f23",
+    backgroundColor:
+      "#fffdf9",
+    boxShadow:
+      "0 7px 18px rgba(95, 31, 35, 0.07)",
+    fontSize: "15px",
+    fontWeight: "700",
+    transition:
+      "border-color 0.2s ease, transform 0.2s ease",
+  };
 
-const dividerContainerStyle: React.CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  gap: "13px",
-  margin: "20px 0",
-};
+const dividerContainerStyle:
+  React.CSSProperties = {
+    display: "flex",
+    alignItems: "center",
+    gap: "13px",
+    margin: "20px 0",
+  };
 
-const dividerLineStyle: React.CSSProperties = {
-  height: "1px",
-  flex: 1,
-  backgroundColor: "#ead7c4",
-};
+const dividerLineStyle:
+  React.CSSProperties = {
+    height: "1px",
+    flex: 1,
+    backgroundColor:
+      "#ead7c4",
+  };
 
-const dividerTextStyle: React.CSSProperties = {
-  color: "#9a6b5f",
-  fontSize: "13px",
-};
+const dividerTextStyle:
+  React.CSSProperties = {
+    color: "#9a6b5f",
+    fontSize: "13px",
+  };
 
-const demoAccountStyle: React.CSSProperties = {
-  display: "flex",
-  alignItems: "flex-start",
-  gap: "11px",
-  marginBottom: "24px",
-  padding: "13px 15px",
-  border: "1px solid #ead7c4",
-  borderRadius: "15px",
-  backgroundColor: "#f9eadf",
-  fontSize: "14px",
-  lineHeight: "1.5",
-};
+const labelStyle:
+  React.CSSProperties = {
+    display: "block",
+    marginBottom: "8px",
+    color: "#5f1f23",
+    fontSize: "14px",
+    fontWeight: "700",
+  };
 
-const labelStyle: React.CSSProperties = {
-  display: "block",
-  marginBottom: "8px",
-  color: "#5f1f23",
-  fontSize: "14px",
-  fontWeight: "700",
-};
+const inputWrapperStyle:
+  React.CSSProperties = {
+    position: "relative",
+  };
 
-const inputWrapperStyle: React.CSSProperties = {
-  position: "relative",
-};
+const inputIconStyle:
+  React.CSSProperties = {
+    position: "absolute",
+    top: "50%",
+    left: "16px",
+    zIndex: 1,
+    transform:
+      "translateY(-50%)",
+    pointerEvents: "none",
+  };
 
-const inputIconStyle: React.CSSProperties = {
-  position: "absolute",
-  top: "50%",
-  left: "16px",
-  zIndex: 1,
-  transform: "translateY(-50%)",
-  pointerEvents: "none",
-};
+const inputStyle:
+  React.CSSProperties = {
+    boxSizing: "border-box",
+    width: "100%",
+    padding:
+      "14px 16px 14px 46px",
+    borderRadius: "14px",
+    backgroundColor:
+      "#fffdf9",
+    color: "#5f1f23",
+    fontSize: "15px",
+    outline: "none",
+    transition:
+      "border-color 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease",
+  };
 
-const inputStyle: React.CSSProperties = {
-  boxSizing: "border-box",
-  width: "100%",
-  padding: "14px 16px 14px 46px",
-  borderRadius: "14px",
-  backgroundColor: "#fffdf9",
-  color: "#5f1f23",
-  fontSize: "15px",
-  outline: "none",
-};
+const primaryButtonStyle:
+  React.CSSProperties = {
+    width: "100%",
+    marginTop: "26px",
+    padding: "15px",
+    border: "none",
+    borderRadius: "14px",
+    color: "white",
+    backgroundColor:
+      "#b90f2f",
+    boxShadow:
+      "0 12px 26px rgba(185, 15, 47, 0.22)",
+    cursor: "pointer",
+    fontSize: "16px",
+    fontWeight: "700",
+    transition:
+      "background-color 0.2s ease, transform 0.2s ease, opacity 0.2s ease",
+  };
 
-const primaryButtonStyle: React.CSSProperties = {
-  width: "100%",
-  marginTop: "26px",
-  padding: "15px",
-  border: "none",
-  borderRadius: "14px",
-  color: "white",
-  backgroundColor: "#b90f2f",
-  boxShadow: "0 12px 26px rgba(185, 15, 47, 0.22)",
-  cursor: "pointer",
-  fontSize: "16px",
-  fontWeight: "700",
-  transition:
-    "background-color 0.2s ease, transform 0.2s ease",
-};
+const messageStyle:
+  React.CSSProperties = {
+    marginTop: "16px",
+    marginBottom: 0,
+    padding: "12px 14px",
+    borderRadius: "12px",
+    textAlign: "center",
+    fontSize: "14px",
+    fontWeight: "600",
+  };
 
-const messageStyle: React.CSSProperties = {
-  marginTop: "16px",
-  marginBottom: 0,
-  padding: "12px 14px",
-  borderRadius: "12px",
-  textAlign: "center",
-  fontSize: "14px",
-  fontWeight: "600",
-};
+const bottomTextStyle:
+  React.CSSProperties = {
+    marginTop: "22px",
+    marginBottom: 0,
+    color: "#8a5c52",
+    textAlign: "center",
+    fontSize: "14px",
+  };
 
-const bottomTextStyle: React.CSSProperties = {
-  marginTop: "22px",
-  marginBottom: 0,
-  color: "#8a5c52",
-  textAlign: "center",
-  fontSize: "14px",
-};
+const linkStyle:
+  React.CSSProperties = {
+    color: "#b90f2f",
+    textDecoration: "none",
+    fontWeight: "700",
+  };
 
-const linkStyle: React.CSSProperties = {
-  color: "#b90f2f",
-  textDecoration: "none",
-  fontWeight: "700",
-};
+const topSymbolStyle:
+  React.CSSProperties = {
+    position: "absolute",
+    top: "28px",
+    color:
+      "rgba(255,255,255,0.72)",
+    fontFamily:
+      "Georgia, serif",
+    fontSize: "20px",
+    letterSpacing: "8px",
+  };
 
-const topSymbolStyle: React.CSSProperties = {
-  position: "absolute",
-  top: "28px",
-  color: "rgba(255,255,255,0.72)",
-  fontFamily: "Georgia, serif",
-  fontSize: "20px",
-  letterSpacing: "8px",
-};
+const largeIconContainerStyle:
+  React.CSSProperties = {
+    width: "118px",
+    height: "118px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: "22px",
+    border:
+      "1px solid rgba(255,255,255,0.55)",
+    borderRadius: "34px",
+    backgroundColor:
+      "rgba(255,255,255,0.12)",
+    boxShadow:
+      "0 22px 45px rgba(95,31,35,0.22)",
+  };
 
-const largeIconContainerStyle: React.CSSProperties = {
-  width: "118px",
-  height: "118px",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  marginBottom: "22px",
-  border: "1px solid rgba(255,255,255,0.55)",
-  borderRadius: "34px",
-  backgroundColor: "rgba(255,255,255,0.12)",
-  boxShadow: "0 22px 45px rgba(95,31,35,0.22)",
-};
+const visualHeadingStyle:
+  React.CSSProperties = {
+    margin: "0 0 15px",
+    fontFamily:
+      "Georgia, serif",
+    fontSize: "38px",
+  };
 
-const visualHeadingStyle: React.CSSProperties = {
-  margin: "0 0 15px",
-  fontFamily: "Georgia, serif",
-  fontSize: "38px",
-};
+const visualTextStyle:
+  React.CSSProperties = {
+    maxWidth: "380px",
+    margin:
+      "0 auto 25px",
+    color:
+      "rgba(255,255,255,0.86)",
+    fontSize: "15px",
+    lineHeight: "1.8",
+  };
 
-const visualTextStyle: React.CSSProperties = {
-  maxWidth: "380px",
-  margin: "0 auto 25px",
-  color: "rgba(255,255,255,0.86)",
-  fontSize: "15px",
-  lineHeight: "1.8",
-};
+const featureListStyle:
+  React.CSSProperties = {
+    display: "flex",
+    flexDirection: "column",
+    gap: "12px",
+  };
 
-const featureListStyle: React.CSSProperties = {
-  display: "flex",
-  flexDirection: "column",
-  gap: "12px",
-};
+const featureItemStyle:
+  React.CSSProperties = {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "9px",
+    color:
+      "rgba(255,255,255,0.95)",
+    fontSize: "14px",
+  };
 
-const featureItemStyle: React.CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  gap: "9px",
-  color: "rgba(255,255,255,0.95)",
-  fontSize: "14px",
-};
-
-const bottomSymbolStyle: React.CSSProperties = {
-  position: "absolute",
-  bottom: "26px",
-  color: "rgba(255,255,255,0.64)",
-  fontFamily: "Georgia, serif",
-  fontSize: "18px",
-  letterSpacing: "7px",
-};
+const bottomSymbolStyle:
+  React.CSSProperties = {
+    position: "absolute",
+    bottom: "26px",
+    color:
+      "rgba(255,255,255,0.64)",
+    fontFamily:
+      "Georgia, serif",
+    fontSize: "18px",
+    letterSpacing: "7px",
+  };
