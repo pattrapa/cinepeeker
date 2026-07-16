@@ -1,67 +1,126 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Image from "next/image";
-import { usePathname, useRouter } from "next/navigation";
-import { useSession, signOut } from "next-auth/react";
+import type { CSSProperties } from "react";
+
 import {
-  Home as HomeIcon,
-  Search,
+  useEffect,
+  useState,
+} from "react";
+
+import Image from "next/image";
+
+import {
+  usePathname,
+  useRouter,
+} from "next/navigation";
+
+import {
+  signOut,
+  useSession,
+} from "next-auth/react";
+
+import {
   Heart,
-  User,
+  Home as HomeIcon,
   LogOut,
   Menu,
-  X,
   NotebookPen,
+  Search,
+  User,
+  X,
 } from "lucide-react";
 
 export default function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
 
-  const { data: session, status } = useSession();
+  const {
+    data: session,
+    status: sessionStatus,
+  } = useSession();
 
-  const [isMockLoggedIn, setIsMockLoggedIn] = useState(false);
-  const [showLogoutPopup, setShowLogoutPopup] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [
+    showLogoutPopup,
+    setShowLogoutPopup,
+  ] = useState(false);
 
-  useEffect(() => {
-    const loginStatus = localStorage.getItem("isLoggedIn");
-    setIsMockLoggedIn(loginStatus === "true");
-  }, []);
+  const [
+    isMobileMenuOpen,
+    setIsMobileMenuOpen,
+  ] = useState(false);
 
   const isLoggedIn =
-    isMockLoggedIn || status === "authenticated";
+    sessionStatus === "authenticated";
+
+  const displayName =
+    session?.user?.username?.trim() ||
+    session?.user?.name?.trim() ||
+    "Logout";
 
   useEffect(() => {
     setIsMobileMenuOpen(false);
   }, [pathname]);
 
-  const handleConfirmLogout = async () => {
-    localStorage.removeItem("isLoggedIn");
-    localStorage.removeItem("loginMethod");
-    localStorage.removeItem("mockUser");
+  useEffect(() => {
+    if (!showLogoutPopup) {
+      return;
+    }
 
-    setIsMockLoggedIn(false);
-    setShowLogoutPopup(false);
-    setIsMobileMenuOpen(false);
+    const previousOverflow =
+      document.body.style.overflow;
 
-    if (session) {
+    document.body.style.overflow =
+      "hidden";
+
+    const handleKeyDown = (
+      event: KeyboardEvent,
+    ) => {
+      if (event.key === "Escape") {
+        setShowLogoutPopup(false);
+      }
+    };
+
+    window.addEventListener(
+      "keydown",
+      handleKeyDown,
+    );
+
+    return () => {
+      document.body.style.overflow =
+        previousOverflow;
+
+      window.removeEventListener(
+        "keydown",
+        handleKeyDown,
+      );
+    };
+  }, [showLogoutPopup]);
+
+  const handleConfirmLogout =
+    async (): Promise<void> => {
+      setShowLogoutPopup(false);
+      setIsMobileMenuOpen(false);
+
       await signOut({
         redirect: false,
       });
-    }
 
-    router.push("/");
-    router.refresh();
-  };
+      router.replace("/");
+      router.refresh();
+    };
 
   const handleLogoutClick = () => {
     setIsMobileMenuOpen(false);
     setShowLogoutPopup(true);
   };
 
-  const isActive = (path: string) => {
+  const closeLogoutPopup = () => {
+    setShowLogoutPopup(false);
+  };
+
+  const isActive = (
+    path: string,
+  ): boolean => {
     if (path === "/") {
       return pathname === "/";
     }
@@ -72,7 +131,10 @@ export default function Navbar() {
   return (
     <>
       <nav className="navbar">
-        <a href="/" className="brand">
+        <a
+          href="/"
+          className="brand"
+        >
           <span className="brandIcon">
             <Image
               src="/cook.png"
@@ -93,7 +155,11 @@ export default function Navbar() {
         <div className="desktopMenu">
           <a
             href="/"
-            className={`navLink ${isActive("/") ? "activeLink" : ""}`}
+            className={`navLink ${
+              isActive("/")
+                ? "activeLink"
+                : ""
+            }`}
           >
             <HomeIcon size={18} />
             Home
@@ -101,8 +167,11 @@ export default function Navbar() {
 
           <a
             href="/search"
-            className={`navLink ${isActive("/search") ? "activeLink" : ""
-              }`}
+            className={`navLink ${
+              isActive("/search")
+                ? "activeLink"
+                : ""
+            }`}
           >
             <Search size={18} />
             Search
@@ -110,35 +179,51 @@ export default function Navbar() {
 
           <a
             href="/watchlist"
-            className={`navLink ${isActive("/watchlist") ? "activeLink" : ""
-              }`}
+            className={`navLink ${
+              isActive("/watchlist")
+                ? "activeLink"
+                : ""
+            }`}
           >
             <Heart size={18} />
             Saved Recipes
           </a>
-          
+
           <a
             href="/my_recipe"
-            className={`navLink addRecipeLink ${isActive("/my_recipe")
-              ? "activeLink"
-              : ""
-              }`}
+            className={`navLink addRecipeLink ${
+              isActive("/my_recipe")
+                ? "activeLink"
+                : ""
+            }`}
           >
-            <NotebookPen  size={18} />
+            <NotebookPen size={18} />
             My Recipes
           </a>
 
-          {isLoggedIn ? (
+          {sessionStatus === "loading" ? (
+            <button
+              type="button"
+              className="navLink accountButton"
+              disabled
+            >
+              <User size={18} />
+              Loading...
+            </button>
+          ) : isLoggedIn ? (
             <button
               type="button"
               onClick={handleLogoutClick}
               className="navLink accountButton"
             >
               <LogOut size={18} />
-              {session?.user?.name || "Logout"}
+              {displayName}
             </button>
           ) : (
-            <a href="/login" className="navLink accountButton">
+            <a
+              href="/login"
+              className="navLink accountButton"
+            >
               <User size={18} />
               Login
             </a>
@@ -149,11 +234,26 @@ export default function Navbar() {
         <button
           type="button"
           className="menuButton"
-          onClick={() => setIsMobileMenuOpen((previousValue) => !previousValue)}
-          aria-label={isMobileMenuOpen ? "Close navigation menu" : "Open navigation menu"}
-          aria-expanded={isMobileMenuOpen}
+          onClick={() =>
+            setIsMobileMenuOpen(
+              (previousValue) =>
+                !previousValue,
+            )
+          }
+          aria-label={
+            isMobileMenuOpen
+              ? "Close navigation menu"
+              : "Open navigation menu"
+          }
+          aria-expanded={
+            isMobileMenuOpen
+          }
         >
-          {isMobileMenuOpen ? <X size={25} /> : <Menu size={27} />}
+          {isMobileMenuOpen ? (
+            <X size={25} />
+          ) : (
+            <Menu size={27} />
+          )}
         </button>
 
         {/* เมนูมือถือ */}
@@ -161,8 +261,11 @@ export default function Navbar() {
           <div className="mobileMenu">
             <a
               href="/"
-              className={`mobileNavLink ${isActive("/") ? "activeMobileLink" : ""
-                }`}
+              className={`mobileNavLink ${
+                isActive("/")
+                  ? "activeMobileLink"
+                  : ""
+              }`}
             >
               <HomeIcon size={19} />
               Home
@@ -170,8 +273,11 @@ export default function Navbar() {
 
             <a
               href="/search"
-              className={`mobileNavLink ${isActive("/search") ? "activeMobileLink" : ""
-                }`}
+              className={`mobileNavLink ${
+                isActive("/search")
+                  ? "activeMobileLink"
+                  : ""
+              }`}
             >
               <Search size={19} />
               Search
@@ -179,40 +285,59 @@ export default function Navbar() {
 
             <a
               href="/watchlist"
-              className={`mobileNavLink ${isActive("/watchlist") ? "activeMobileLink" : ""
-                }`}
+              className={`mobileNavLink ${
+                isActive("/watchlist")
+                  ? "activeMobileLink"
+                  : ""
+              }`}
             >
               <Heart size={19} />
               Saved Recipes
             </a>
-            
+
             <a
               href="/my_recipe"
-              className={`mobileNavLink ${isActive("/my_recipe")
-                ? "activeMobileLink"
-                : ""
-                }`}
+              className={`mobileNavLink ${
+                isActive("/my_recipe")
+                  ? "activeMobileLink"
+                  : ""
+              }`}
             >
-              <NotebookPen  size={19} />
+              <NotebookPen size={19} />
               My Recipes
             </a>
-            
+
             <div className="mobileDivider" />
 
-            {isLoggedIn ? (
+            {sessionStatus ===
+            "loading" ? (
               <button
                 type="button"
-                onClick={handleLogoutClick}
+                className="mobileNavLink mobileAccountButton"
+                disabled
+              >
+                <User size={19} />
+                Loading...
+              </button>
+            ) : isLoggedIn ? (
+              <button
+                type="button"
+                onClick={
+                  handleLogoutClick
+                }
                 className="mobileNavLink mobileAccountButton"
               >
                 <LogOut size={19} />
-                {session?.user?.name || "Logout"}
+                {displayName}
               </button>
             ) : (
               <a
                 href="/login"
-                className={`mobileNavLink mobileAccountButton ${isActive("/login") ? "activeMobileLink" : ""
-                  }`}
+                className={`mobileNavLink mobileAccountButton ${
+                  isActive("/login")
+                    ? "activeMobileLink"
+                    : ""
+                }`}
               >
                 <User size={19} />
                 Login
@@ -223,34 +348,68 @@ export default function Navbar() {
       </nav>
 
       {showLogoutPopup && (
-        <div className="popupOverlay">
-          <div className="popupCard">
-            <div className="popupDecoration">❦</div>
+        <div
+          className="popupOverlay"
+          role="presentation"
+          onMouseDown={
+            closeLogoutPopup
+          }
+        >
+          <section
+            className="popupCard"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="logout-popup-title"
+            aria-describedby="logout-popup-description"
+            onMouseDown={(event) =>
+              event.stopPropagation()
+            }
+          >
+            <div className="popupDecoration">
+              ❦
+            </div>
 
-            <h2 className="popupTitle">Confirm Logout</h2>
+            <h2
+              id="logout-popup-title"
+              className="popupTitle"
+            >
+              Confirm Logout
+            </h2>
 
-            <p className="popupDescription">
-              Are you sure you want to logout from RecipePeeker?
+            <p
+              id="logout-popup-description"
+              className="popupDescription"
+            >
+              Are you sure you want to
+              logout from RecipePeeker?
             </p>
 
             <div className="popupActions">
               <button
                 type="button"
-                onClick={() => setShowLogoutPopup(false)}
-                style={secondaryButtonStyle}
+                onClick={
+                  closeLogoutPopup
+                }
+                style={
+                  secondaryButtonStyle
+                }
               >
                 Cancel
               </button>
 
               <button
                 type="button"
-                onClick={handleConfirmLogout}
-                style={primaryButtonStyle}
+                onClick={() => {
+                  void handleConfirmLogout();
+                }}
+                style={
+                  primaryButtonStyle
+                }
               >
                 Yes, Logout
               </button>
             </div>
-          </div>
+          </section>
         </div>
       )}
 
@@ -261,16 +420,34 @@ export default function Navbar() {
           z-index: 1000;
           display: flex;
           align-items: center;
-          justify-content: space-between;
+          justify-content:
+            space-between;
           gap: 16px;
           padding: 20px 64px;
-          border-bottom: 1px solid #ead7c4;
+          border-bottom: 1px solid
+            #ead7c4;
           background: linear-gradient(
             180deg,
-            rgba(255, 250, 243, 0.98),
-            rgba(255, 247, 237, 0.94)
+            rgba(
+              255,
+              250,
+              243,
+              0.98
+            ),
+            rgba(
+              255,
+              247,
+              237,
+              0.94
+            )
           );
-          box-shadow: 0 8px 30px rgba(185, 15, 47, 0.08);
+          box-shadow: 0 8px 30px
+            rgba(
+              185,
+              15,
+              47,
+              0.08
+            );
         }
 
         .brand {
@@ -283,27 +460,35 @@ export default function Navbar() {
         }
 
         .brandIcon {
-  width: 48px;
-  height: 48px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  overflow: hidden;
-  border: 1px solid #ead7c4;
-  border-radius: 50%;
-  background-color: #fffaf3;
-  box-shadow: 0 10px 24px rgba(185, 15, 47, 0.16);
-}
+          width: 48px;
+          height: 48px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+          overflow: hidden;
+          border: 1px solid
+            #ead7c4;
+          border-radius: 50%;
+          background-color: #fffaf3;
+          box-shadow: 0 10px 24px
+            rgba(
+              185,
+              15,
+              47,
+              0.16
+            );
+        }
 
-.brandLogo {
-  width: 34px;
-  height: 34px;
-  object-fit: contain;
-}
+        .brandLogo {
+          width: 34px;
+          height: 34px;
+          object-fit: contain;
+        }
 
         .brandText {
-          font-family: Georgia, serif;
+          font-family: Georgia,
+            serif;
           font-size: 30px;
           font-weight: 700;
         }
@@ -324,7 +509,8 @@ export default function Navbar() {
           justify-content: center;
           gap: 8px;
           padding: 12px 20px;
-          border: 1px solid transparent;
+          border: 1px solid
+            transparent;
           border-radius: 18px;
           color: #5f1f23;
           background: transparent;
@@ -335,22 +521,36 @@ export default function Navbar() {
           cursor: pointer;
           transition:
             color 0.2s ease,
-            background-color 0.2s ease,
+            background-color 0.2s
+              ease,
             border-color 0.2s ease,
             transform 0.2s ease,
             box-shadow 0.2s ease;
         }
 
-        .navLink:hover {
+        .navLink:hover:not(
+            :disabled
+          ) {
           color: #b90f2f;
           background-color: #fffaf3;
           transform: translateY(-1px);
         }
 
+        .navLink:disabled {
+          cursor: default;
+          opacity: 0.65;
+        }
+
         .activeLink {
           color: #b90f2f;
           background-color: #fffaf3;
-          box-shadow: 0 8px 24px rgba(185, 15, 47, 0.12);
+          box-shadow: 0 8px 24px
+            rgba(
+              185,
+              15,
+              47,
+              0.12
+            );
         }
 
         .accountButton {
@@ -365,11 +565,18 @@ export default function Navbar() {
           align-items: center;
           justify-content: center;
           flex-shrink: 0;
-          border: 1px solid #ead7c4;
+          border: 1px solid
+            #ead7c4;
           border-radius: 15px;
           color: #b90f2f;
           background-color: #fffaf3;
-          box-shadow: 0 8px 20px rgba(185, 15, 47, 0.1);
+          box-shadow: 0 8px 20px
+            rgba(
+              185,
+              15,
+              47,
+              0.1
+            );
           cursor: pointer;
         }
 
@@ -377,16 +584,27 @@ export default function Navbar() {
           position: absolute;
           top: calc(100% + 10px);
           right: 20px;
-          width: min(280px, calc(100vw - 40px));
+          width: min(
+            280px,
+            calc(100vw - 40px)
+          );
           display: none;
           flex-direction: column;
           gap: 6px;
           padding: 14px;
-          border: 1px solid #ead7c4;
+          border: 1px solid
+            #ead7c4;
           border-radius: 22px;
           background-color: #fffaf3;
-          box-shadow: 0 24px 55px rgba(95, 31, 35, 0.2);
-          animation: openMenu 0.2s ease;
+          box-shadow: 0 24px 55px
+            rgba(
+              95,
+              31,
+              35,
+              0.2
+            );
+          animation: openMenu
+            0.2s ease;
         }
 
         .mobileNavLink {
@@ -396,10 +614,12 @@ export default function Navbar() {
           align-items: center;
           gap: 11px;
           padding: 13px 15px;
-          border: 1px solid transparent;
+          border: 1px solid
+            transparent;
           border-radius: 14px;
           color: #5f1f23;
-          background-color: transparent;
+          background-color:
+            transparent;
           text-decoration: none;
           font-family: inherit;
           font-size: 15px;
@@ -407,12 +627,20 @@ export default function Navbar() {
           cursor: pointer;
           transition:
             color 0.2s ease,
-            background-color 0.2s ease;
+            background-color 0.2s
+              ease;
         }
 
-        .mobileNavLink:hover {
+        .mobileNavLink:hover:not(
+            :disabled
+          ) {
           color: #b90f2f;
           background-color: #f9eadf;
+        }
+
+        .mobileNavLink:disabled {
+          cursor: default;
+          opacity: 0.65;
         }
 
         .activeMobileLink {
@@ -439,7 +667,12 @@ export default function Navbar() {
           align-items: center;
           justify-content: center;
           padding: 20px;
-          background-color: rgba(95, 31, 35, 0.45);
+          background-color: rgba(
+            95,
+            31,
+            35,
+            0.45
+          );
         }
 
         .popupCard {
@@ -449,25 +682,39 @@ export default function Navbar() {
           overflow: hidden;
           box-sizing: border-box;
           padding: 30px;
-          border: 1px solid #ead7c4;
+          border: 1px solid
+            #ead7c4;
           border-radius: 28px;
           color: #5f1f23;
           background-color: #fffaf3;
-          box-shadow: 0 25px 70px rgba(95, 31, 35, 0.25);
+          box-shadow: 0 25px 70px
+            rgba(
+              95,
+              31,
+              35,
+              0.25
+            );
         }
 
         .popupDecoration {
           position: absolute;
           top: -18px;
           right: -10px;
-          color: rgba(185, 15, 47, 0.08);
-          font-family: Georgia, serif;
+          color: rgba(
+            185,
+            15,
+            47,
+            0.08
+          );
+          font-family: Georgia,
+            serif;
           font-size: 74px;
         }
 
         .popupTitle {
           margin: 0 0 12px;
-          font-family: Georgia, serif;
+          font-family: Georgia,
+            serif;
           font-size: 26px;
         }
 
@@ -485,22 +732,30 @@ export default function Navbar() {
         }
 
         .addRecipeLink {
-  border-color: #b90f2f;
-  color: white;
-  background-color: #b90f2f;
-  box-shadow: 0 9px 22px rgba(185, 15, 47, 0.18);
-}
+          border-color: #b90f2f;
+          color: white;
+          background-color: #b90f2f;
+          box-shadow: 0 9px 22px
+            rgba(
+              185,
+              15,
+              47,
+              0.18
+            );
+        }
 
-.addRecipeLink:hover {
-  border-color: #8f0d25;
-  color: white;
-  background-color: #8f0d25;
-}
-  
+        .addRecipeLink:hover {
+          border-color: #8f0d25;
+          color: white;
+          background-color: #8f0d25;
+        }
+
         @keyframes openMenu {
           from {
             opacity: 0;
-            transform: translateY(-8px);
+            transform: translateY(
+              -8px
+            );
           }
 
           to {
@@ -561,7 +816,9 @@ export default function Navbar() {
 
           .mobileMenu {
             right: 12px;
-            width: calc(100vw - 24px);
+            width: calc(
+              100vw - 24px
+            );
           }
 
           .popupCard {
@@ -570,7 +827,8 @@ export default function Navbar() {
           }
 
           .popupActions {
-            flex-direction: column-reverse;
+            flex-direction:
+              column-reverse;
           }
         }
       `}</style>
@@ -578,22 +836,24 @@ export default function Navbar() {
   );
 }
 
-const primaryButtonStyle: React.CSSProperties = {
-  padding: "12px 18px",
-  border: "none",
-  borderRadius: "999px",
-  color: "white",
-  backgroundColor: "#b90f2f",
-  cursor: "pointer",
-  fontWeight: "bold",
-};
+const primaryButtonStyle: CSSProperties =
+  {
+    padding: "12px 18px",
+    border: "none",
+    borderRadius: "999px",
+    color: "white",
+    backgroundColor: "#b90f2f",
+    cursor: "pointer",
+    fontWeight: "bold",
+  };
 
-const secondaryButtonStyle: React.CSSProperties = {
-  padding: "12px 18px",
-  border: "1px solid #d8b9a6",
-  borderRadius: "999px",
-  color: "#5f1f23",
-  backgroundColor: "transparent",
-  cursor: "pointer",
-  fontWeight: "bold",
-};
+const secondaryButtonStyle: CSSProperties =
+  {
+    padding: "12px 18px",
+    border: "1px solid #d8b9a6",
+    borderRadius: "999px",
+    color: "#5f1f23",
+    backgroundColor: "transparent",
+    cursor: "pointer",
+    fontWeight: "bold",
+  };

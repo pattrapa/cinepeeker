@@ -35,10 +35,14 @@ import {
   UsersRound,
 } from "lucide-react";
 
-type Difficulty = "Easy" | "Medium" | "Hard";
+type Difficulty =
+  | "Easy"
+  | "Medium"
+  | "Hard";
 
 type Recipe = {
   _id: string;
+  ownerId?: string;
   title: string;
   category: string;
   timeMinutes: number;
@@ -90,18 +94,18 @@ export default function EditRecipePage() {
   } = useSession();
 
   const recipeId = params.id;
+  const accessToken =
+    session?.accessToken;
 
-  const [isMockLoggedIn, setIsMockLoggedIn] =
-    useState(false);
+  const displayName =
+    session?.user?.username?.trim() ||
+    session?.user?.name?.trim() ||
+    "RecipePeeker User";
 
-  const [mockUserName, setMockUserName] =
-    useState("RecipePeeker User");
-
-  const [isAuthChecked, setIsAuthChecked] =
-    useState(false);
-
-  const [isLoadingRecipe, setIsLoadingRecipe] =
-    useState(true);
+  const [
+    isLoadingRecipe,
+    setIsLoadingRecipe,
+  ] = useState(true);
 
   const [loadError, setLoadError] =
     useState("");
@@ -112,20 +116,28 @@ export default function EditRecipePage() {
   const [category, setCategory] =
     useState("Dessert");
 
-  const [timeMinutes, setTimeMinutes] =
-    useState("");
+  const [
+    timeMinutes,
+    setTimeMinutes,
+  ] = useState("");
 
-  const [difficulty, setDifficulty] =
-    useState<Difficulty>("Easy");
+  const [
+    difficulty,
+    setDifficulty,
+  ] = useState<Difficulty>("Easy");
 
   const [servings, setServings] =
     useState("");
 
-  const [description, setDescription] =
-    useState("");
+  const [
+    description,
+    setDescription,
+  ] = useState("");
 
-  const [ingredients, setIngredients] =
-    useState<string[]>([""]);
+  const [
+    ingredients,
+    setIngredients,
+  ] = useState<string[]>([""]);
 
   const [steps, setSteps] =
     useState<string[]>([""]);
@@ -133,11 +145,15 @@ export default function EditRecipePage() {
   const [imageFile, setImageFile] =
     useState<File | null>(null);
 
-  const [imagePreview, setImagePreview] =
-    useState("");
+  const [
+    imagePreview,
+    setImagePreview,
+  ] = useState("");
 
-  const [currentImageUrl, setCurrentImageUrl] =
-    useState("");
+  const [
+    currentImageUrl,
+    setCurrentImageUrl,
+  ] = useState("");
 
   const [message, setMessage] =
     useState("");
@@ -145,50 +161,20 @@ export default function EditRecipePage() {
   const [isSuccess, setIsSuccess] =
     useState(false);
 
-  const [isSubmitting, setIsSubmitting] =
-    useState(false);
-
-  const isGoogleLoggedIn =
-    sessionStatus === "authenticated";
-
-  const isLoggedIn =
-    isMockLoggedIn || isGoogleLoggedIn;
-
-  const authorName =
-    session?.user?.name?.trim() ||
-    mockUserName ||
-    "RecipePeeker User";
+  const [
+    isSubmitting,
+    setIsSubmitting,
+  ] = useState(false);
 
   useEffect(() => {
-    const mockLoginStatus =
-      localStorage.getItem("isLoggedIn") ===
-      "true";
-
-    const storedMockUser =
-      localStorage
-        .getItem("mockUser")
-        ?.trim();
-
-    setIsMockLoggedIn(mockLoginStatus);
-
-    setMockUserName(
-      storedMockUser ||
-        "RecipePeeker User",
-    );
-
-    setIsAuthChecked(true);
-  }, []);
-
-  useEffect(() => {
-    if (!isAuthChecked) {
-      return;
-    }
-
     if (sessionStatus === "loading") {
       return;
     }
 
-    if (!isLoggedIn) {
+    if (
+      sessionStatus !==
+      "authenticated"
+    ) {
       router.replace(
         `/login?redirect=${encodeURIComponent(
           `/edit_recipe/${recipeId}`,
@@ -196,8 +182,6 @@ export default function EditRecipePage() {
       );
     }
   }, [
-    isAuthChecked,
-    isLoggedIn,
     recipeId,
     router,
     sessionStatus,
@@ -206,9 +190,13 @@ export default function EditRecipePage() {
   useEffect(() => {
     return () => {
       if (
-        imagePreview.startsWith("blob:")
+        imagePreview.startsWith(
+          "blob:",
+        )
       ) {
-        URL.revokeObjectURL(imagePreview);
+        URL.revokeObjectURL(
+          imagePreview,
+        );
       }
     };
   }, [imagePreview]);
@@ -221,7 +209,15 @@ export default function EditRecipePage() {
         );
 
         setIsLoadingRecipe(false);
+        return;
+      }
 
+      if (!accessToken) {
+        setLoadError(
+          "Authentication token was not found. Please log in again.",
+        );
+
+        setIsLoadingRecipe(false);
         return;
       }
 
@@ -235,6 +231,9 @@ export default function EditRecipePage() {
           `${API_URL}/api/recipes/${recipeId}`,
           {
             method: "GET",
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
             cache: "no-store",
           },
         );
@@ -259,6 +258,27 @@ export default function EditRecipePage() {
           !response.ok ||
           !result.success
         ) {
+          if (response.status === 401) {
+            throw new Error(
+              result.message ||
+                "Your login session is invalid or has expired. Please log in again.",
+            );
+          }
+
+          if (response.status === 403) {
+            throw new Error(
+              result.message ||
+                "You do not have permission to edit this recipe.",
+            );
+          }
+
+          if (response.status === 404) {
+            throw new Error(
+              result.message ||
+                "Recipe not found.",
+            );
+          }
+
           throw new Error(
             result.message ||
               "Unable to load this recipe.",
@@ -273,27 +293,6 @@ export default function EditRecipePage() {
 
         const loadedRecipe =
           result.data;
-
-        const recipeAuthor =
-          (
-            loadedRecipe.authorName ||
-            "RecipePeeker User"
-          )
-            .trim()
-            .toLowerCase();
-
-        const currentAuthor =
-          authorName
-            .trim()
-            .toLowerCase();
-
-        if (
-          recipeAuthor !== currentAuthor
-        ) {
-          throw new Error(
-            "You can only edit recipes created by your account.",
-          );
-        }
 
         setTitle(
           loadedRecipe.title || "",
@@ -345,20 +344,17 @@ export default function EditRecipePage() {
           Array.isArray(
             loadedRecipe.steps,
           ) &&
-            loadedRecipe.steps.length >
-              0
+            loadedRecipe.steps.length > 0
             ? loadedRecipe.steps
             : [""],
         );
 
         setCurrentImageUrl(
-          loadedRecipe.imageUrl ||
-            "",
+          loadedRecipe.imageUrl || "",
         );
 
         setImagePreview(
-          loadedRecipe.imageUrl ||
-            "",
+          loadedRecipe.imageUrl || "",
         );
 
         setImageFile(null);
@@ -376,28 +372,36 @@ export default function EditRecipePage() {
       } finally {
         setIsLoadingRecipe(false);
       }
-    }, [authorName, recipeId]);
+    }, [
+      accessToken,
+      recipeId,
+    ]);
 
   useEffect(() => {
-    if (!isAuthChecked) {
+    if (sessionStatus === "loading") {
       return;
     }
 
     if (
-      sessionStatus === "loading"
+      sessionStatus !==
+      "authenticated"
     ) {
+      setIsLoadingRecipe(false);
       return;
     }
 
-    if (!isLoggedIn) {
+    if (!accessToken) {
+      setLoadError(
+        "Authentication token was not found. Please log in again.",
+      );
+
       setIsLoadingRecipe(false);
       return;
     }
 
     void loadRecipe();
   }, [
-    isAuthChecked,
-    isLoggedIn,
+    accessToken,
     loadRecipe,
     sessionStatus,
   ]);
@@ -431,7 +435,6 @@ export default function EditRecipePage() {
       );
 
       event.target.value = "";
-
       return;
     }
 
@@ -444,7 +447,6 @@ export default function EditRecipePage() {
       );
 
       event.target.value = "";
-
       return;
     }
 
@@ -477,7 +479,6 @@ export default function EditRecipePage() {
     }
 
     setImageFile(null);
-
     setImagePreview(
       currentImageUrl,
     );
@@ -584,6 +585,20 @@ export default function EditRecipePage() {
     setMessage("");
     setIsSuccess(false);
 
+    if (!recipeId) {
+      setMessage(
+        "Recipe ID is missing.",
+      );
+      return;
+    }
+
+    if (!accessToken) {
+      setMessage(
+        "Authentication token was not found. Please log in again.",
+      );
+      return;
+    }
+
     const cleanedIngredients =
       ingredients
         .map((ingredient) =>
@@ -608,7 +623,6 @@ export default function EditRecipePage() {
       setMessage(
         "Please enter the recipe title.",
       );
-
       return;
     }
 
@@ -619,7 +633,6 @@ export default function EditRecipePage() {
       setMessage(
         "Please choose a recipe image.",
       );
-
       return;
     }
 
@@ -630,7 +643,6 @@ export default function EditRecipePage() {
       setMessage(
         "Cooking time must be at least 1 minute.",
       );
-
       return;
     }
 
@@ -641,7 +653,6 @@ export default function EditRecipePage() {
       setMessage(
         "Servings must be at least 1.",
       );
-
       return;
     }
 
@@ -649,7 +660,6 @@ export default function EditRecipePage() {
       setMessage(
         "Please enter a recipe description.",
       );
-
       return;
     }
 
@@ -660,7 +670,6 @@ export default function EditRecipePage() {
       setMessage(
         "Please add at least one ingredient.",
       );
-
       return;
     }
 
@@ -670,7 +679,6 @@ export default function EditRecipePage() {
       setMessage(
         "Please add at least one cooking step.",
       );
-
       return;
     }
 
@@ -724,11 +732,10 @@ export default function EditRecipePage() {
         ),
       );
 
-      formData.append(
-        "authorName",
-        authorName,
-      );
-
+      /*
+       * ไม่ต้องส่ง ownerId หรือ authorName
+       * Backend จะตรวจเจ้าของจาก JWT
+       */
       if (imageFile) {
         formData.append(
           "image",
@@ -740,6 +747,9 @@ export default function EditRecipePage() {
         `${API_URL}/api/recipes/${recipeId}`,
         {
           method: "PUT",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
           body: formData,
         },
       );
@@ -767,14 +777,31 @@ export default function EditRecipePage() {
         !result.success
       ) {
         const errorDetails =
-          result.errors?.join(
-            " ",
-          ) ?? "";
+          result.errors?.join(" ") ??
+          "";
+
+        let fallbackMessage =
+          "Unable to update recipe.";
+
+        if (response.status === 401) {
+          fallbackMessage =
+            "Your login session is invalid or has expired. Please log in again.";
+        } else if (
+          response.status === 403
+        ) {
+          fallbackMessage =
+            "You can only edit recipes created by your account.";
+        } else if (
+          response.status === 404
+        ) {
+          fallbackMessage =
+            "Recipe not found.";
+        }
 
         throw new Error(
           `${
             result.message ||
-            "Unable to update recipe."
+            fallbackMessage
           } ${errorDetails}`.trim(),
         );
       }
@@ -854,16 +881,16 @@ export default function EditRecipePage() {
     }
   };
 
-  if (
-    !isAuthChecked ||
-    sessionStatus === "loading"
-  ) {
+  if (sessionStatus === "loading") {
     return (
       <LoadingPage message="Preparing the edit form..." />
     );
   }
 
-  if (!isLoggedIn) {
+  if (
+    sessionStatus !==
+    "authenticated"
+  ) {
     return (
       <LoadingPage message="Redirecting to login..." />
     );
@@ -1100,8 +1127,7 @@ export default function EditRecipePage() {
                     value={title}
                     onChange={(event) =>
                       setTitle(
-                        event.target
-                          .value,
+                        event.target.value,
                       )
                     }
                     placeholder="e.g. Cherry Cream Cake"
@@ -1118,19 +1144,14 @@ export default function EditRecipePage() {
                     <select
                       id="category"
                       value={category}
-                      onChange={(
-                        event,
-                      ) =>
+                      onChange={(event) =>
                         setCategory(
-                          event.target
-                            .value,
+                          event.target.value,
                         )
                       }
                     >
                       {categories.map(
-                        (
-                          categoryItem,
-                        ) => (
+                        (categoryItem) => (
                           <option
                             key={
                               categoryItem
@@ -1156,9 +1177,7 @@ export default function EditRecipePage() {
                     <select
                       id="difficulty"
                       value={difficulty}
-                      onChange={(
-                        event,
-                      ) =>
+                      onChange={(event) =>
                         setDifficulty(
                           event.target
                             .value as Difficulty,
@@ -1197,9 +1216,7 @@ export default function EditRecipePage() {
                         value={
                           timeMinutes
                         }
-                        onChange={(
-                          event,
-                        ) =>
+                        onChange={(event) =>
                           setTimeMinutes(
                             event.target
                               .value,
@@ -1228,9 +1245,7 @@ export default function EditRecipePage() {
                         type="number"
                         min="1"
                         value={servings}
-                        onChange={(
-                          event,
-                        ) =>
+                        onChange={(event) =>
                           setServings(
                             event.target
                               .value,
@@ -1256,8 +1271,7 @@ export default function EditRecipePage() {
                     value={description}
                     onChange={(event) =>
                       setDescription(
-                        event.target
-                          .value,
+                        event.target.value,
                       )
                     }
                     placeholder="Tell everyone what makes this recipe special..."
@@ -1277,8 +1291,7 @@ export default function EditRecipePage() {
 
                   <div>
                     <span>
-                      What you&apos;ll
-                      need
+                      What you&apos;ll need
                     </span>
 
                     <h2>Ingredients</h2>
@@ -1304,9 +1317,7 @@ export default function EditRecipePage() {
                           value={
                             ingredient
                           }
-                          onChange={(
-                            event,
-                          ) =>
+                          onChange={(event) =>
                             updateIngredient(
                               index,
                               event.target
@@ -1381,9 +1392,7 @@ export default function EditRecipePage() {
 
                         <textarea
                           value={step}
-                          onChange={(
-                            event,
-                          ) =>
+                          onChange={(event) =>
                             updateStep(
                               index,
                               event.target
@@ -1441,7 +1450,7 @@ export default function EditRecipePage() {
                     This recipe will remain
                     under the name{" "}
                     <strong>
-                      {authorName}
+                      {displayName}
                     </strong>
                     .
                   </p>
