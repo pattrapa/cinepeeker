@@ -6,6 +6,9 @@ import { env } from "./config/env";
 
 import authRoutes from "./routes/authRoutes";
 import recipeRoutes from "./routes/recipeRoutes";
+import reviewRoutes from "./routes/reviewRoutes";
+
+import savedRecipeRoutes from "./routes/savedRecipeRoutes";
 
 const app = express();
 
@@ -43,6 +46,7 @@ app.get(
   (_request, response) => {
     response.status(200).json({
       success: true,
+
       message:
         "RecipePeeker API is running.",
     });
@@ -60,12 +64,26 @@ app.use(
 );
 
 app.use(
+  "/api/reviews",
+  reviewRoutes,
+);
+
+app.use(
+  "/api/saved-recipes",
+  savedRecipeRoutes,
+);
+
+/*
+ * ต้องอยู่ล่างสุด
+ */
+app.use(
   (
     _request,
     response,
   ) => {
     response.status(404).json({
       success: false,
+
       message:
         "API route not found.",
     });

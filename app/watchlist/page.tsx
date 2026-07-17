@@ -1,14 +1,31 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import type {
+  CSSProperties,
+} from "react";
+
+import {
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
+
+import {
+  useRouter,
+} from "next/navigation";
+
+import {
+  useSession,
+} from "next-auth/react";
+
 import {
   ArrowLeft,
   ChefHat,
   CookingPot,
   Eye,
   Heart,
+  LoaderCircle,
+  RefreshCw,
   Sparkles,
   Trash2,
 } from "lucide-react";
@@ -18,84 +35,149 @@ type SavedRecipeStatus =
   | "Watched"
   | "Favorite";
 
-type SavedRecipeId = string | number;
+type RecipeSummary = {
+  _id: string;
+  title: string;
+  category: string;
+  imageUrl: string;
+};
 
 type SavedRecipeItem = {
-  id: SavedRecipeId;
-  title: string;
-  channel: string;
-  thumbnail: string;
+  _id: string;
   status: SavedRecipeStatus;
+  createdAt?: string;
+  updatedAt?: string;
+  recipe: RecipeSummary;
 };
+
+type SavedRecipesResponse = {
+  success: boolean;
+  message?: string;
+  count?: number;
+  data?: SavedRecipeItem[];
+};
+
+type SavedRecipeMutationResponse = {
+  success: boolean;
+  message?: string;
+  errors?: string[];
+
+  data?: {
+    _id: string;
+    userId: string;
+    recipeId: string;
+    status: SavedRecipeStatus;
+    createdAt?: string;
+    updatedAt?: string;
+  };
+};
+
+type MessageType =
+  | "success"
+  | "error"
+  | "";
+
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL ??
+  "http://localhost:5000";
 
 const statusOptions: {
   value: SavedRecipeStatus;
   label: string;
 }[] = [
-    {
-      value: "Want to Watch",
-      label: "Want to Cook",
-    },
-    {
-      value: "Watched",
-      label: "Cooked",
-    },
-    {
-      value: "Favorite",
-      label: "Favorite",
-    },
-  ];
+  {
+    value: "Want to Watch",
+    label: "Want to Cook",
+  },
+  {
+    value: "Watched",
+    label: "Cooked",
+  },
+  {
+    value: "Favorite",
+    label: "Favorite",
+  },
+];
+
+async function parseJsonResponse<T>(
+  response: Response,
+): Promise<T> {
+  const responseText =
+    await response.text();
+
+  try {
+    return JSON.parse(
+      responseText,
+    ) as T;
+  } catch {
+    throw new Error(
+      responseText ||
+        "The server returned an invalid response.",
+    );
+  }
+}
 
 export default function WatchlistPage() {
-  const router = useRouter();
+  const router =
+    useRouter();
 
-  const { status: sessionStatus } = useSession();
+  const {
+    data: session,
+    status: sessionStatus,
+  } = useSession();
 
-  const [isMockLoggedIn, setIsMockLoggedIn] =
-    useState(false);
+  const accessToken =
+    session?.accessToken;
 
-  const [isAuthChecked, setIsAuthChecked] =
-    useState(false);
+  const [
+    savedRecipes,
+    setSavedRecipes,
+  ] = useState<SavedRecipeItem[]>(
+    [],
+  );
 
-  const [isLoadingRecipes, setIsLoadingRecipes] =
-    useState(true);
+  const [
+    isLoadingRecipes,
+    setIsLoadingRecipes,
+  ] = useState(true);
 
-  const [savedRecipes, setSavedRecipes] = useState<
-    SavedRecipeItem[]
-  >([]);
+  const [
+    pageError,
+    setPageError,
+  ] = useState("");
 
-  const isGoogleLoggedIn =
-    sessionStatus === "authenticated";
+  const [
+    pageMessage,
+    setPageMessage,
+  ] = useState("");
+
+  const [
+    messageType,
+    setMessageType,
+  ] = useState<MessageType>("");
+
+  const [
+    updatingRecipeId,
+    setUpdatingRecipeId,
+  ] = useState<string | null>(
+    null,
+  );
+
+  const [
+    removingRecipeId,
+    setRemovingRecipeId,
+  ] = useState<string | null>(
+    null,
+  );
 
   const isLoggedIn =
-    isMockLoggedIn || isGoogleLoggedIn;
+    sessionStatus ===
+    "authenticated";
 
-  /*
-    ตรวจ Mock Login จาก localStorage
-    ทำครั้งเดียวหลัง Component โหลดใน Browser
-  */
   useEffect(() => {
-    const mockLoginStatus =
-      localStorage.getItem("isLoggedIn") === "true";
-
-    setIsMockLoggedIn(mockLoginStatus);
-    setIsAuthChecked(true);
-  }, []);
-
-  /*
-    Redirect หลังตรวจครบทั้ง:
-    1. Mock Login
-    2. Google Session
-
-    ห้าม redirect ตอน sessionStatus === "loading"
-    เพราะ Google Session อาจกำลังโหลดอยู่
-  */
-  useEffect(() => {
-    if (!isAuthChecked) {
-      return;
-    }
-
-    if (sessionStatus === "loading") {
+    if (
+      sessionStatus === "loading"
+    ) {
       return;
     }
 
@@ -107,160 +189,362 @@ export default function WatchlistPage() {
       );
     }
   }, [
-    isAuthChecked,
-    sessionStatus,
     isLoggedIn,
     router,
+    sessionStatus,
   ]);
 
-  /*
-    โหลด Saved Recipes หลังจากยืนยันแล้วว่า Login อยู่
-  */
-  useEffect(() => {
-    if (!isAuthChecked) {
-      return;
-    }
+  const loadSavedRecipes =
+    useCallback(
+      async (): Promise<void> => {
+        if (
+          sessionStatus ===
+          "loading"
+        ) {
+          return;
+        }
 
-    if (sessionStatus === "loading") {
-      return;
-    }
-
-    if (!isLoggedIn) {
-      setIsLoadingRecipes(false);
-      return;
-    }
-
-    try {
-      const storedWatchlist = localStorage.getItem(
-        "watchlist",
-      );
-
-      if (!storedWatchlist) {
-        setSavedRecipes([]);
-        setIsLoadingRecipes(false);
-        return;
-      }
-
-      const parsedWatchlist: unknown =
-        JSON.parse(storedWatchlist);
-
-      if (!Array.isArray(parsedWatchlist)) {
-        localStorage.setItem("watchlist", "[]");
-        setSavedRecipes([]);
-        setIsLoadingRecipes(false);
-        return;
-      }
-
-      const normalizedRecipes =
-        parsedWatchlist
-          .filter(
-            (
-              item,
-            ): item is Record<string, unknown> =>
-              typeof item === "object" &&
-              item !== null,
-          )
-          .map((item) => {
-            const savedStatus =
-              item.status === "Watched" ||
-                item.status === "Favorite"
-                ? item.status
-                : "Want to Watch";
-
-            return {
-              id:
-                typeof item.id === "string" ||
-                  typeof item.id === "number"
-                  ? item.id
-                  : "",
-
-              title:
-                typeof item.title === "string"
-                  ? item.title
-                  : "Untitled Recipe",
-
-              channel:
-                typeof item.channel === "string"
-                  ? item.channel
-                  : "Other",
-
-              thumbnail:
-                typeof item.thumbnail === "string"
-                  ? item.thumbnail
-                  : "",
-
-              status:
-                savedStatus as SavedRecipeStatus,
-            };
-          })
-          .filter(
-            (recipe) =>
-              String(recipe.id).trim() !== "",
+        if (!isLoggedIn) {
+          setIsLoadingRecipes(
+            false,
           );
 
-      setSavedRecipes(normalizedRecipes);
-    } catch (error) {
-      console.error(
-        "Unable to read saved recipes:",
-        error,
-      );
+          return;
+        }
 
-      localStorage.setItem("watchlist", "[]");
-      setSavedRecipes([]);
-    } finally {
-      setIsLoadingRecipes(false);
-    }
-  }, [
-    isAuthChecked,
-    sessionStatus,
-    isLoggedIn,
-  ]);
+        if (!accessToken) {
+          setSavedRecipes([]);
 
-  const saveRecipesToLocalStorage = (
-    recipes: SavedRecipeItem[],
-  ) => {
-    localStorage.setItem(
-      "watchlist",
-      JSON.stringify(recipes),
-    );
+          setPageError(
+            "Authentication token was not found. Please log in again.",
+          );
 
-    setSavedRecipes(recipes);
-  };
+          setIsLoadingRecipes(
+            false,
+          );
 
-  const handleStatusChange = (
-    recipeId: SavedRecipeId,
-    newStatus: SavedRecipeStatus,
-  ) => {
-    const updatedRecipes = savedRecipes.map(
-      (recipe) =>
-        String(recipe.id) === String(recipeId)
-          ? {
-            ...recipe,
-            status: newStatus,
+          return;
+        }
+
+        try {
+          setIsLoadingRecipes(
+            true,
+          );
+
+          setPageError("");
+
+          const response =
+            await fetch(
+              `${API_URL}/api/saved-recipes`,
+              {
+                method: "GET",
+
+                headers: {
+                  Authorization:
+                    `Bearer ${accessToken}`,
+                },
+
+                cache: "no-store",
+              },
+            );
+
+          const result =
+            await parseJsonResponse<
+              SavedRecipesResponse
+            >(response);
+
+          if (
+            response.status === 401
+          ) {
+            router.replace(
+              `/login?redirect=${encodeURIComponent(
+                "/watchlist",
+              )}`,
+            );
+
+            return;
           }
-          : recipe,
+
+          if (
+            !response.ok ||
+            !result.success
+          ) {
+            throw new Error(
+              result.message ||
+                "Unable to load saved recipes.",
+            );
+          }
+
+          setSavedRecipes(
+            Array.isArray(result.data)
+              ? result.data
+              : [],
+          );
+        } catch (error) {
+          setSavedRecipes([]);
+
+          setPageError(
+            error instanceof Error
+              ? error.message
+              : "Unable to load saved recipes.",
+          );
+        } finally {
+          setIsLoadingRecipes(
+            false,
+          );
+        }
+      },
+      [
+        accessToken,
+        isLoggedIn,
+        router,
+        sessionStatus,
+      ],
     );
 
-    saveRecipesToLocalStorage(updatedRecipes);
-  };
+  useEffect(() => {
+    void loadSavedRecipes();
+  }, [loadSavedRecipes]);
 
-  const handleRemoveRecipe = (
-    recipeId: SavedRecipeId,
-  ) => {
-    const updatedRecipes = savedRecipes.filter(
-      (recipe) =>
-        String(recipe.id) !== String(recipeId),
-    );
+  const clearPageMessage =
+    () => {
+      setPageMessage("");
+      setMessageType("");
+    };
 
-    saveRecipesToLocalStorage(updatedRecipes);
-  };
+  const handleStatusChange =
+    async (
+      recipeId: string,
+      newStatus:
+        SavedRecipeStatus,
+    ): Promise<void> => {
+      clearPageMessage();
+
+      if (!accessToken) {
+        setPageMessage(
+          "Authentication token was not found. Please log in again.",
+        );
+
+        setMessageType("error");
+        return;
+      }
+
+      const currentRecipe =
+        savedRecipes.find(
+          (savedRecipe) =>
+            savedRecipe.recipe
+              ._id === recipeId,
+        );
+
+      if (
+        !currentRecipe ||
+        currentRecipe.status ===
+          newStatus
+      ) {
+        return;
+      }
+
+      try {
+        setUpdatingRecipeId(
+          recipeId,
+        );
+
+        const response =
+          await fetch(
+            `${API_URL}/api/saved-recipes/${encodeURIComponent(
+              recipeId,
+            )}`,
+            {
+              method: "PATCH",
+
+              headers: {
+                "Content-Type":
+                  "application/json",
+
+                Authorization:
+                  `Bearer ${accessToken}`,
+              },
+
+              body: JSON.stringify({
+                status: newStatus,
+              }),
+            },
+          );
+
+        const result =
+          await parseJsonResponse<
+            SavedRecipeMutationResponse
+          >(response);
+
+        if (
+          response.status === 401
+        ) {
+          router.replace(
+            `/login?redirect=${encodeURIComponent(
+              "/watchlist",
+            )}`,
+          );
+
+          return;
+        }
+
+        if (
+          !response.ok ||
+          !result.success
+        ) {
+          const validationErrors =
+            result.errors?.join(
+              " ",
+            ) ?? "";
+
+          throw new Error(
+            `${
+              result.message ||
+              "Unable to update the saved recipe."
+            } ${validationErrors}`.trim(),
+          );
+        }
+
+        setSavedRecipes(
+          (previousRecipes) =>
+            previousRecipes.map(
+              (savedRecipe) =>
+                savedRecipe.recipe
+                  ._id === recipeId
+                  ? {
+                      ...savedRecipe,
+                      status:
+                        result.data
+                          ?.status ??
+                        newStatus,
+                    }
+                  : savedRecipe,
+            ),
+        );
+
+        setPageMessage(
+          result.message ||
+            "Cooking status updated successfully.",
+        );
+
+        setMessageType(
+          "success",
+        );
+      } catch (error) {
+        setPageMessage(
+          error instanceof Error
+            ? error.message
+            : "Unable to update the saved recipe.",
+        );
+
+        setMessageType("error");
+      } finally {
+        setUpdatingRecipeId(
+          null,
+        );
+      }
+    };
+
+  const handleRemoveRecipe =
+    async (
+      recipeId: string,
+    ): Promise<void> => {
+      clearPageMessage();
+
+      if (!accessToken) {
+        setPageMessage(
+          "Authentication token was not found. Please log in again.",
+        );
+
+        setMessageType("error");
+        return;
+      }
+
+      try {
+        setRemovingRecipeId(
+          recipeId,
+        );
+
+        const response =
+          await fetch(
+            `${API_URL}/api/saved-recipes/${encodeURIComponent(
+              recipeId,
+            )}`,
+            {
+              method: "DELETE",
+
+              headers: {
+                Authorization:
+                  `Bearer ${accessToken}`,
+              },
+            },
+          );
+
+        const result =
+          await parseJsonResponse<
+            SavedRecipeMutationResponse
+          >(response);
+
+        if (
+          response.status === 401
+        ) {
+          router.replace(
+            `/login?redirect=${encodeURIComponent(
+              "/watchlist",
+            )}`,
+          );
+
+          return;
+        }
+
+        if (
+          !response.ok ||
+          !result.success
+        ) {
+          throw new Error(
+            result.message ||
+              "Unable to remove the saved recipe.",
+          );
+        }
+
+        setSavedRecipes(
+          (previousRecipes) =>
+            previousRecipes.filter(
+              (savedRecipe) =>
+                savedRecipe.recipe
+                  ._id !== recipeId,
+            ),
+        );
+
+        setPageMessage(
+          result.message ||
+            "Recipe removed from saved recipes.",
+        );
+
+        setMessageType(
+          "success",
+        );
+      } catch (error) {
+        setPageMessage(
+          error instanceof Error
+            ? error.message
+            : "Unable to remove the saved recipe.",
+        );
+
+        setMessageType("error");
+      } finally {
+        setRemovingRecipeId(
+          null,
+        );
+      }
+    };
 
   const handleViewRecipe = (
-    recipeId: SavedRecipeId,
+    recipeId: string,
   ) => {
     router.push(
       `/trailer/${encodeURIComponent(
-        String(recipeId),
+        recipeId,
       )}`,
     );
   };
@@ -268,53 +552,75 @@ export default function WatchlistPage() {
   const getStatusLabel = (
     status: SavedRecipeStatus,
   ) => {
-    const matchedStatus = statusOptions.find(
-      (option) => option.value === status,
-    );
+    const matchedStatus =
+      statusOptions.find(
+        (option) =>
+          option.value === status,
+      );
 
-    return matchedStatus?.label || status;
+    return (
+      matchedStatus?.label ||
+      status
+    );
   };
 
-  /*
-    แสดง Loading ระหว่างตรวจ session
-    เพื่อป้องกันหน้าเด้งไป Login ก่อน Google Session โหลดเสร็จ
-  */
   if (
-    !isAuthChecked ||
-    sessionStatus === "loading" ||
+    sessionStatus ===
+      "loading" ||
     isLoadingRecipes
   ) {
     return (
-      <main style={loadingPageStyle}>
-        <div style={loadingIconStyle}>
+      <main
+        style={
+          loadingPageStyle
+        }
+      >
+        <div
+          style={
+            loadingIconStyle
+          }
+        >
           <CookingPot
             size={39}
             strokeWidth={1.7}
           />
         </div>
 
-        <p style={loadingTextStyle}>
-          Preparing your saved recipes...
+        <p
+          style={
+            loadingTextStyle
+          }
+        >
+          Preparing your saved
+          recipes...
         </p>
       </main>
     );
   }
 
-  /*
-    ระหว่าง router.replace กำลังส่งไปหน้า Login
-    ไม่แสดงเนื้อหา Saved Recipes
-  */
   if (!isLoggedIn) {
     return (
-      <main style={loadingPageStyle}>
-        <div style={loadingIconStyle}>
+      <main
+        style={
+          loadingPageStyle
+        }
+      >
+        <div
+          style={
+            loadingIconStyle
+          }
+        >
           <CookingPot
             size={39}
             strokeWidth={1.7}
           />
         </div>
 
-        <p style={loadingTextStyle}>
+        <p
+          style={
+            loadingTextStyle
+          }
+        >
           Redirecting to login...
         </p>
       </main>
@@ -323,37 +629,71 @@ export default function WatchlistPage() {
 
   return (
     <main style={pageStyle}>
-      <div style={pageContainerStyle}>
+      <div
+        style={
+          pageContainerStyle
+        }
+      >
         <button
           type="button"
-          onClick={() => router.push("/")}
-          style={backButtonStyle}
+          onClick={() =>
+            router.push("/")
+          }
+          style={
+            backButtonStyle
+          }
         >
           <ArrowLeft size={18} />
           Back to Home
         </button>
 
-        <section style={headingSectionStyle}>
-          <div style={headingDecorationStyle}>
-            ❦ Your personal collection ❦
+        <section
+          style={
+            headingSectionStyle
+          }
+        >
+          <div
+            style={
+              headingDecorationStyle
+            }
+          >
+            ❦ Your personal
+            collection ❦
           </div>
 
           <div
             className="saved-heading-row"
-            style={headingRowStyle}
+            style={
+              headingRowStyle
+            }
           >
             <div>
-              <h1 style={pageHeadingStyle}>
+              <h1
+                style={
+                  pageHeadingStyle
+                }
+              >
                 Saved Recipes
               </h1>
 
-              <p style={pageDescriptionStyle}>
-                Keep your favorite recipes together and
-                organize what you would love to cook next.
+              <p
+                style={
+                  pageDescriptionStyle
+                }
+              >
+                Keep your favorite
+                recipes together and
+                organize what you
+                would love to cook
+                next.
               </p>
             </div>
 
-            <div style={recipeCountStyle}>
+            <div
+              style={
+                recipeCountStyle
+              }
+            >
               <Heart
                 size={19}
                 color="#b90f2f"
@@ -361,8 +701,11 @@ export default function WatchlistPage() {
               />
 
               <span>
-                {savedRecipes.length}{" "}
-                {savedRecipes.length === 1
+                {
+                  savedRecipes.length
+                }{" "}
+                {savedRecipes.length ===
+                1
                   ? "Recipe"
                   : "Recipes"}
               </span>
@@ -370,147 +713,462 @@ export default function WatchlistPage() {
           </div>
         </section>
 
-        {savedRecipes.length === 0 ? (
-          <section style={emptyStateStyle}>
-            <div style={emptyDecorationTopStyle}>
+        {pageMessage && (
+          <div
+            role={
+              messageType ===
+              "success"
+                ? "status"
+                : "alert"
+            }
+            style={{
+              ...pageMessageStyle,
+
+              ...(messageType ===
+              "success"
+                ? successMessageStyle
+                : errorMessageStyle),
+            }}
+          >
+            {pageMessage}
+          </div>
+        )}
+
+        {pageError ? (
+          <section
+            style={
+              emptyStateStyle
+            }
+          >
+            <div
+              style={
+                emptyDecorationTopStyle
+              }
+            >
               ✧ ❦ ✧
             </div>
 
-            <div style={emptyIconStyle}>
+            <div
+              style={
+                emptyIconStyle
+              }
+            >
+              <RefreshCw
+                size={45}
+                strokeWidth={1.6}
+              />
+            </div>
+
+            <h2
+              style={
+                emptyHeadingStyle
+              }
+            >
+              Unable to load saved
+              recipes
+            </h2>
+
+            <p
+              style={
+                emptyDescriptionStyle
+              }
+            >
+              {pageError}
+            </p>
+
+            <button
+              type="button"
+              onClick={() => {
+                void loadSavedRecipes();
+              }}
+              style={
+                exploreButtonStyle
+              }
+            >
+              <RefreshCw
+                size={19}
+              />
+
+              Try Again
+            </button>
+
+            <div
+              style={
+                emptyDecorationBottomStyle
+              }
+            >
+              ❧ ♡ ❦
+            </div>
+          </section>
+        ) : savedRecipes.length ===
+          0 ? (
+          <section
+            style={
+              emptyStateStyle
+            }
+          >
+            <div
+              style={
+                emptyDecorationTopStyle
+              }
+            >
+              ✧ ❦ ✧
+            </div>
+
+            <div
+              style={
+                emptyIconStyle
+              }
+            >
               <ChefHat
                 size={50}
                 strokeWidth={1.5}
               />
             </div>
 
-            <h2 style={emptyHeadingStyle}>
-              Your recipe collection is empty
+            <h2
+              style={
+                emptyHeadingStyle
+              }
+            >
+              Your recipe collection
+              is empty
             </h2>
 
-            <p style={emptyDescriptionStyle}>
-              Explore RecipePeeker and save recipes that
-              inspire your next cozy meal.
+            <p
+              style={
+                emptyDescriptionStyle
+              }
+            >
+              Explore RecipePeeker
+              and save recipes that
+              inspire your next cozy
+              meal.
             </p>
 
             <button
               type="button"
-              onClick={() => router.push("/search")}
-              style={exploreButtonStyle}
+              onClick={() =>
+                router.push(
+                  "/search",
+                )
+              }
+              style={
+                exploreButtonStyle
+              }
             >
-              <Sparkles size={19} />
+              <Sparkles
+                size={19}
+              />
+
               Explore Recipes
             </button>
 
-            <div style={emptyDecorationBottomStyle}>
+            <div
+              style={
+                emptyDecorationBottomStyle
+              }
+            >
               ❧ ♡ ❦
             </div>
           </section>
         ) : (
-          <section style={recipeGridStyle}>
-            {savedRecipes.map((recipe) => (
-              <article
-                key={String(recipe.id)}
-                style={recipeCardStyle}
-              >
-                <div style={imageWrapperStyle}>
-                  <img
-                    src={recipe.thumbnail}
-                    alt={recipe.title}
-                    style={recipeImageStyle}
-                  />
+          <section
+            style={
+              recipeGridStyle
+            }
+          >
+            {savedRecipes.map(
+              (savedRecipe) => {
+                const recipe =
+                  savedRecipe.recipe;
 
-                  <div style={imageOverlayStyle} />
+                const isUpdating =
+                  updatingRecipeId ===
+                  recipe._id;
 
-                  <span style={categoryBadgeStyle}>
-                    {recipe.channel}
-                  </span>
+                const isRemoving =
+                  removingRecipeId ===
+                  recipe._id;
 
-                  <span style={statusBadgeStyle}>
-                    {getStatusLabel(recipe.status)}
-                  </span>
-                </div>
+                const isBusy =
+                  isUpdating ||
+                  isRemoving;
 
-                <div style={recipeContentStyle}>
-                  <div style={cardDecorationStyle}>
-                    ❦ Saved Recipe
-                  </div>
-
-                  <h2 style={recipeTitleStyle}>
-                    {recipe.title}
-                  </h2>
-
-                  <p style={categoryTextStyle}>
-                    Category:{" "}
-                    <strong>{recipe.channel}</strong>
-                  </p>
-
-                  <label
-                    htmlFor={`status-${String(recipe.id)}`}
-                    style={statusLabelStyle}
+                return (
+                  <article
+                    key={
+                      savedRecipe._id
+                    }
+                    style={
+                      recipeCardStyle
+                    }
                   >
-                    Cooking status
-                  </label>
-
-                  <div style={selectWrapperStyle}>
-                    <select
-                      id={`status-${String(recipe.id)}`}
-                      value={recipe.status}
-                      onChange={(event) =>
-                        handleStatusChange(
-                          recipe.id,
-                          event.target
-                            .value as SavedRecipeStatus,
-                        )
+                    <div
+                      style={
+                        imageWrapperStyle
                       }
-                      style={statusSelectStyle}
                     >
-                      {statusOptions.map((option) => (
-                        <option
-                          key={option.value}
-                          value={option.value}
+                      <img
+                        src={
+                          recipe.imageUrl
+                        }
+                        alt={
+                          recipe.title
+                        }
+                        style={
+                          recipeImageStyle
+                        }
+                      />
+
+                      <div
+                        style={
+                          imageOverlayStyle
+                        }
+                      />
+
+                      <span
+                        style={
+                          categoryBadgeStyle
+                        }
+                      >
+                        {
+                          recipe.category
+                        }
+                      </span>
+
+                      <span
+                        style={
+                          statusBadgeStyle
+                        }
+                      >
+                        {getStatusLabel(
+                          savedRecipe.status,
+                        )}
+                      </span>
+                    </div>
+
+                    <div
+                      style={
+                        recipeContentStyle
+                      }
+                    >
+                      <div
+                        style={
+                          cardDecorationStyle
+                        }
+                      >
+                        ❦ Saved Recipe
+                      </div>
+
+                      <h2
+                        style={
+                          recipeTitleStyle
+                        }
+                      >
+                        {
+                          recipe.title
+                        }
+                      </h2>
+
+                      <p
+                        style={
+                          categoryTextStyle
+                        }
+                      >
+                        Category:{" "}
+
+                        <strong>
+                          {
+                            recipe.category
+                          }
+                        </strong>
+                      </p>
+
+                      <label
+                        htmlFor={`status-${recipe._id}`}
+                        style={
+                          statusLabelStyle
+                        }
+                      >
+                        Cooking status
+                      </label>
+
+                      <div
+                        style={
+                          selectWrapperStyle
+                        }
+                      >
+                        <select
+                          id={`status-${recipe._id}`}
+                          value={
+                            savedRecipe.status
+                          }
+                          disabled={
+                            isBusy
+                          }
+                          onChange={(
+                            event,
+                          ) => {
+                            void handleStatusChange(
+                              recipe._id,
+                              event.target
+                                .value as SavedRecipeStatus,
+                            );
+                          }}
+                          style={{
+                            ...statusSelectStyle,
+
+                            cursor: isBusy
+                              ? "not-allowed"
+                              : "pointer",
+
+                            opacity: isBusy
+                              ? 0.65
+                              : 1,
+                          }}
                         >
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                          {statusOptions.map(
+                            (
+                              option,
+                            ) => (
+                              <option
+                                key={
+                                  option.value
+                                }
+                                value={
+                                  option.value
+                                }
+                              >
+                                {
+                                  option.label
+                                }
+                              </option>
+                            ),
+                          )}
+                        </select>
 
-                  <div style={cardActionsStyle}>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        handleViewRecipe(recipe.id)
-                      }
-                      style={viewButtonStyle}
-                    >
-                      <Eye size={18} />
-                      View Recipe
-                    </button>
+                        {isUpdating && (
+                          <LoaderCircle
+                            size={18}
+                            className="selectLoader"
+                          />
+                        )}
+                      </div>
 
-                    <button
-                      type="button"
-                      onClick={() =>
-                        handleRemoveRecipe(recipe.id)
-                      }
-                      style={removeButtonStyle}
-                      aria-label={`Remove ${recipe.title}`}
-                      title="Remove Recipe"
-                    >
-                      <Trash2 size={18} />
-                    </button>
-                  </div>
-                </div>
-              </article>
-            ))}
+                      <div
+                        style={
+                          cardActionsStyle
+                        }
+                      >
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleViewRecipe(
+                              recipe._id,
+                            )
+                          }
+                          disabled={
+                            isBusy
+                          }
+                          style={{
+                            ...viewButtonStyle,
+
+                            cursor: isBusy
+                              ? "not-allowed"
+                              : "pointer",
+
+                            opacity: isBusy
+                              ? 0.65
+                              : 1,
+                          }}
+                        >
+                          <Eye
+                            size={18}
+                          />
+
+                          View Recipe
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            void handleRemoveRecipe(
+                              recipe._id,
+                            );
+                          }}
+                          disabled={
+                            isBusy
+                          }
+                          style={{
+                            ...removeButtonStyle,
+
+                            cursor: isBusy
+                              ? "not-allowed"
+                              : "pointer",
+
+                            opacity: isBusy
+                              ? 0.65
+                              : 1,
+                          }}
+                          aria-label={`Remove ${recipe.title}`}
+                          title="Remove Recipe"
+                        >
+                          {isRemoving ? (
+                            <LoaderCircle
+                              size={18}
+                              className="buttonLoader"
+                            />
+                          ) : (
+                            <Trash2
+                              size={18}
+                            />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  </article>
+                );
+              },
+            )}
           </section>
         )}
       </div>
 
       <style jsx>{`
-        @media (max-width: 760px) {
+        :global(.selectLoader) {
+          position: absolute;
+          top: 50%;
+          right: 14px;
+          color: #b90f2f;
+          pointer-events: none;
+          animation: spin 0.9s
+            linear infinite;
+          transform: translateY(
+            -50%
+          );
+        }
+
+        :global(.buttonLoader) {
+          animation: spin 0.9s
+            linear infinite;
+        }
+
+        @keyframes spin {
+          to {
+            transform: rotate(
+              360deg
+            );
+          }
+        }
+
+        @media (
+          max-width: 760px
+        ) {
           .saved-heading-row {
             flex-direction: column;
-            align-items: flex-start;
+            align-items:
+              flex-start;
           }
         }
       `}</style>
@@ -518,70 +1176,91 @@ export default function WatchlistPage() {
   );
 }
 
-const pageStyle: React.CSSProperties = {
+const pageStyle:
+  CSSProperties = {
   minHeight: "100vh",
-  padding: "42px 24px 80px",
+  padding:
+    "42px 24px 80px",
   color: "#5f1f23",
+
   background:
     "radial-gradient(circle at top left, rgba(255,255,255,0.96), transparent 28%), radial-gradient(circle at bottom right, rgba(217,32,69,0.07), transparent 32%), #fff7ed",
 };
 
-const pageContainerStyle: React.CSSProperties = {
+const pageContainerStyle:
+  CSSProperties = {
   width: "100%",
   maxWidth: "1180px",
   margin: "0 auto",
 };
 
-const backButtonStyle: React.CSSProperties = {
+const backButtonStyle:
+  CSSProperties = {
   display: "inline-flex",
   alignItems: "center",
   gap: "8px",
   marginBottom: "26px",
   padding: "11px 17px",
-  border: "1px solid #ead7c4",
+  border:
+    "1px solid #ead7c4",
   borderRadius: "999px",
   color: "#8f0d25",
   backgroundColor: "#fffaf3",
-  boxShadow: "0 8px 20px rgba(95,31,35,0.08)",
+
+  boxShadow:
+    "0 8px 20px rgba(95,31,35,0.08)",
+
   cursor: "pointer",
   fontSize: "14px",
   fontWeight: "700",
 };
 
-const headingSectionStyle: React.CSSProperties = {
+const headingSectionStyle:
+  CSSProperties = {
   marginBottom: "32px",
   padding: "30px 34px",
-  border: "1px solid #ead7c4",
+  border:
+    "1px solid #ead7c4",
   borderRadius: "28px",
   backgroundColor: "#fffaf3",
-  boxShadow: "0 18px 46px rgba(95,31,35,0.09)",
+
+  boxShadow:
+    "0 18px 46px rgba(95,31,35,0.09)",
 };
 
-const headingDecorationStyle: React.CSSProperties = {
+const headingDecorationStyle:
+  CSSProperties = {
   marginBottom: "10px",
   color: "#b90f2f",
-  fontFamily: "Georgia, serif",
+  fontFamily:
+    "Georgia, serif",
   fontSize: "14px",
   letterSpacing: "1.3px",
 };
 
-const headingRowStyle: React.CSSProperties = {
+const headingRowStyle:
+  CSSProperties = {
   display: "flex",
   alignItems: "flex-end",
-  justifyContent: "space-between",
+  justifyContent:
+    "space-between",
   flexWrap: "wrap",
   gap: "22px",
 };
 
-const pageHeadingStyle: React.CSSProperties = {
+const pageHeadingStyle:
+  CSSProperties = {
   margin: "0 0 10px",
   color: "#8f0d25",
-  fontFamily: "Georgia, serif",
-  fontSize: "clamp(38px, 5vw, 56px)",
+  fontFamily:
+    "Georgia, serif",
+  fontSize:
+    "clamp(38px, 5vw, 56px)",
   lineHeight: "1.1",
 };
 
-const pageDescriptionStyle: React.CSSProperties = {
+const pageDescriptionStyle:
+  CSSProperties = {
   maxWidth: "650px",
   margin: 0,
   color: "#8a5c52",
@@ -589,12 +1268,14 @@ const pageDescriptionStyle: React.CSSProperties = {
   lineHeight: "1.75",
 };
 
-const recipeCountStyle: React.CSSProperties = {
+const recipeCountStyle:
+  CSSProperties = {
   display: "flex",
   alignItems: "center",
   gap: "9px",
   padding: "12px 18px",
-  border: "1px solid #ead7c4",
+  border:
+    "1px solid #ead7c4",
   borderRadius: "999px",
   color: "#8f0d25",
   backgroundColor: "#f9eadf",
@@ -602,97 +1283,159 @@ const recipeCountStyle: React.CSSProperties = {
   fontWeight: "700",
 };
 
-const recipeGridStyle: React.CSSProperties = {
+const pageMessageStyle:
+  CSSProperties = {
+  marginBottom: "24px",
+  padding: "14px 17px",
+  borderRadius: "14px",
+  fontSize: "14px",
+  fontWeight: "600",
+  lineHeight: "1.6",
+};
+
+const successMessageStyle:
+  CSSProperties = {
+  border:
+    "1px solid #cce6d1",
+  color: "#3f7b50",
+  backgroundColor: "#edf7ee",
+};
+
+const errorMessageStyle:
+  CSSProperties = {
+  border:
+    "1px solid #f1c4cb",
+  color: "#b90f2f",
+  backgroundColor: "#fff0f2",
+};
+
+const recipeGridStyle:
+  CSSProperties = {
   display: "grid",
+
   gridTemplateColumns:
     "repeat(auto-fit, minmax(min(280px, 100%), 1fr))",
+
   gap: "25px",
 };
 
-const recipeCardStyle: React.CSSProperties = {
+const recipeCardStyle:
+  CSSProperties = {
   overflow: "hidden",
-  border: "1px solid #ead7c4",
+  border:
+    "1px solid #ead7c4",
   borderRadius: "26px",
   backgroundColor: "#fffaf3",
-  boxShadow: "0 17px 44px rgba(95,31,35,0.1)",
+
+  boxShadow:
+    "0 17px 44px rgba(95,31,35,0.1)",
 };
 
-const imageWrapperStyle: React.CSSProperties = {
+const imageWrapperStyle:
+  CSSProperties = {
   position: "relative",
   height: "245px",
   overflow: "hidden",
 };
 
-const recipeImageStyle: React.CSSProperties = {
+const recipeImageStyle:
+  CSSProperties = {
   width: "100%",
   height: "100%",
   display: "block",
   objectFit: "cover",
 };
 
-const imageOverlayStyle: React.CSSProperties = {
+const imageOverlayStyle:
+  CSSProperties = {
   position: "absolute",
   inset: 0,
   pointerEvents: "none",
+
   background:
     "linear-gradient(180deg, rgba(95,31,35,0.04), rgba(95,31,35,0.34))",
 };
 
-const categoryBadgeStyle: React.CSSProperties = {
+const categoryBadgeStyle:
+  CSSProperties = {
   position: "absolute",
   top: "17px",
   left: "17px",
   padding: "8px 13px",
-  border: "1px solid rgba(255,255,255,0.76)",
+
+  border:
+    "1px solid rgba(255,255,255,0.76)",
+
   borderRadius: "999px",
   color: "#8f0d25",
-  backgroundColor: "rgba(255,250,243,0.94)",
-  boxShadow: "0 7px 18px rgba(95,31,35,0.14)",
+
+  backgroundColor:
+    "rgba(255,250,243,0.94)",
+
+  boxShadow:
+    "0 7px 18px rgba(95,31,35,0.14)",
+
   fontSize: "12px",
   fontWeight: "700",
 };
 
-const statusBadgeStyle: React.CSSProperties = {
+const statusBadgeStyle:
+  CSSProperties = {
   position: "absolute",
   right: "17px",
   bottom: "17px",
   padding: "8px 13px",
-  border: "1px solid rgba(255,255,255,0.68)",
+
+  border:
+    "1px solid rgba(255,255,255,0.68)",
+
   borderRadius: "999px",
   color: "white",
-  backgroundColor: "rgba(185,15,47,0.9)",
-  boxShadow: "0 7px 18px rgba(95,31,35,0.2)",
+
+  backgroundColor:
+    "rgba(185,15,47,0.9)",
+
+  boxShadow:
+    "0 7px 18px rgba(95,31,35,0.2)",
+
   fontSize: "12px",
   fontWeight: "700",
 };
 
-const recipeContentStyle: React.CSSProperties = {
+const recipeContentStyle:
+  CSSProperties = {
   padding: "24px",
 };
 
-const cardDecorationStyle: React.CSSProperties = {
+const cardDecorationStyle:
+  CSSProperties = {
   marginBottom: "7px",
   color: "#b90f2f",
-  fontFamily: "Georgia, serif",
+  fontFamily:
+    "Georgia, serif",
   fontSize: "12px",
   letterSpacing: "0.7px",
 };
 
-const recipeTitleStyle: React.CSSProperties = {
+const recipeTitleStyle:
+  CSSProperties = {
   margin: "0 0 10px",
   color: "#8f0d25",
-  fontFamily: "Georgia, serif",
+  fontFamily:
+    "Georgia, serif",
   fontSize: "25px",
   lineHeight: "1.25",
 };
 
-const categoryTextStyle: React.CSSProperties = {
+const categoryTextStyle:
+  CSSProperties = {
   margin: "0 0 21px",
   color: "#8a5c52",
   fontSize: "14px",
 };
 
-const statusLabelStyle: React.CSSProperties = {
+const statusLabelStyle:
+  CSSProperties = {
   display: "block",
   marginBottom: "8px",
   color: "#5f1f23",
@@ -700,32 +1443,41 @@ const statusLabelStyle: React.CSSProperties = {
   fontWeight: "700",
 };
 
-const selectWrapperStyle: React.CSSProperties = {
+const selectWrapperStyle:
+  CSSProperties = {
   position: "relative",
 };
 
-const statusSelectStyle: React.CSSProperties = {
+const statusSelectStyle:
+  CSSProperties = {
   width: "100%",
   boxSizing: "border-box",
-  padding: "13px 14px",
-  border: "1px solid #ead7c4",
+  padding: "13px 42px 13px 14px",
+
+  border:
+    "1px solid #ead7c4",
+
   borderRadius: "13px",
   color: "#5f1f23",
   backgroundColor: "#fffdf9",
-  cursor: "pointer",
   fontFamily: "inherit",
   fontSize: "14px",
   outline: "none",
 };
 
-const cardActionsStyle: React.CSSProperties = {
+const cardActionsStyle:
+  CSSProperties = {
   display: "grid",
-  gridTemplateColumns: "1fr auto",
+
+  gridTemplateColumns:
+    "1fr auto",
+
   gap: "10px",
   marginTop: "20px",
 };
 
-const viewButtonStyle: React.CSSProperties = {
+const viewButtonStyle:
+  CSSProperties = {
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
@@ -735,46 +1487,60 @@ const viewButtonStyle: React.CSSProperties = {
   borderRadius: "13px",
   color: "white",
   backgroundColor: "#b90f2f",
-  boxShadow: "0 10px 22px rgba(185,15,47,0.2)",
-  cursor: "pointer",
+
+  boxShadow:
+    "0 10px 22px rgba(185,15,47,0.2)",
+
   fontWeight: "700",
 };
 
-const removeButtonStyle: React.CSSProperties = {
+const removeButtonStyle:
+  CSSProperties = {
   width: "46px",
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
-  border: "1px solid #efc6ca",
+
+  border:
+    "1px solid #efc6ca",
+
   borderRadius: "13px",
   color: "#b90f2f",
   backgroundColor: "#fff0f2",
-  cursor: "pointer",
 };
 
-const emptyStateStyle: React.CSSProperties = {
+const emptyStateStyle:
+  CSSProperties = {
   position: "relative",
   overflow: "hidden",
   padding: "75px 25px",
-  border: "1px solid #ead7c4",
+
+  border:
+    "1px solid #ead7c4",
+
   borderRadius: "30px",
   textAlign: "center",
   backgroundColor: "#fffaf3",
-  boxShadow: "0 18px 48px rgba(95,31,35,0.09)",
+
+  boxShadow:
+    "0 18px 48px rgba(95,31,35,0.09)",
 };
 
-const emptyDecorationTopStyle: React.CSSProperties = {
+const emptyDecorationTopStyle:
+  CSSProperties = {
   position: "absolute",
   top: "25px",
-  left: 0,
   right: 0,
+  left: 0,
   color: "#d92045",
-  fontFamily: "Georgia, serif",
+  fontFamily:
+    "Georgia, serif",
   fontSize: "18px",
   letterSpacing: "8px",
 };
 
-const emptyIconStyle: React.CSSProperties = {
+const emptyIconStyle:
+  CSSProperties = {
   width: "100px",
   height: "100px",
   display: "flex",
@@ -783,26 +1549,34 @@ const emptyIconStyle: React.CSSProperties = {
   margin: "0 auto 23px",
   borderRadius: "30px",
   color: "white",
+
   background:
     "linear-gradient(135deg, #b90f2f, #d92045)",
-  boxShadow: "0 18px 35px rgba(185,15,47,0.22)",
+
+  boxShadow:
+    "0 18px 35px rgba(185,15,47,0.22)",
 };
 
-const emptyHeadingStyle: React.CSSProperties = {
+const emptyHeadingStyle:
+  CSSProperties = {
   margin: "0 0 12px",
   color: "#8f0d25",
-  fontFamily: "Georgia, serif",
+  fontFamily:
+    "Georgia, serif",
   fontSize: "31px",
 };
 
-const emptyDescriptionStyle: React.CSSProperties = {
+const emptyDescriptionStyle:
+  CSSProperties = {
   maxWidth: "510px",
-  margin: "0 auto 27px",
+  margin:
+    "0 auto 27px",
   color: "#8a5c52",
   lineHeight: "1.75",
 };
 
-const exploreButtonStyle: React.CSSProperties = {
+const exploreButtonStyle:
+  CSSProperties = {
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
@@ -812,22 +1586,32 @@ const exploreButtonStyle: React.CSSProperties = {
   borderRadius: "14px",
   color: "white",
   backgroundColor: "#b90f2f",
-  boxShadow: "0 12px 26px rgba(185,15,47,0.22)",
+
+  boxShadow:
+    "0 12px 26px rgba(185,15,47,0.22)",
+
   cursor: "pointer",
   fontWeight: "700",
 };
 
-const emptyDecorationBottomStyle: React.CSSProperties = {
+const emptyDecorationBottomStyle:
+  CSSProperties = {
   position: "absolute",
   right: 0,
   bottom: "23px",
   left: 0,
-  color: "rgba(185,15,47,0.38)",
-  fontFamily: "Georgia, serif",
+
+  color:
+    "rgba(185,15,47,0.38)",
+
+  fontFamily:
+    "Georgia, serif",
+
   letterSpacing: "7px",
 };
 
-const loadingPageStyle: React.CSSProperties = {
+const loadingPageStyle:
+  CSSProperties = {
   minHeight: "100vh",
   display: "flex",
   flexDirection: "column",
@@ -838,22 +1622,30 @@ const loadingPageStyle: React.CSSProperties = {
   backgroundColor: "#fff7ed",
 };
 
-const loadingIconStyle: React.CSSProperties = {
+const loadingIconStyle:
+  CSSProperties = {
   width: "82px",
   height: "82px",
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
-  border: "1px solid #ead7c4",
+
+  border:
+    "1px solid #ead7c4",
+
   borderRadius: "25px",
   color: "white",
   backgroundColor: "#b90f2f",
-  boxShadow: "0 15px 32px rgba(185,15,47,0.2)",
+
+  boxShadow:
+    "0 15px 32px rgba(185,15,47,0.2)",
 };
 
-const loadingTextStyle: React.CSSProperties = {
+const loadingTextStyle:
+  CSSProperties = {
   margin: 0,
   color: "#8a5c52",
-  fontFamily: "Georgia, serif",
+  fontFamily:
+    "Georgia, serif",
   fontSize: "17px",
 };

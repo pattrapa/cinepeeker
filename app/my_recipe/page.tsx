@@ -63,14 +63,8 @@ export default function MyRecipesPage() {
     status: sessionStatus,
   } = useSession();
 
-  const [isMockLoggedIn, setIsMockLoggedIn] =
-    useState(false);
-
-  const [mockUserName, setMockUserName] =
-    useState("RecipePeeker User");
-
-  const [isAuthChecked, setIsAuthChecked] =
-    useState(false);
+  const accessToken =
+    session?.accessToken;
 
   const [recipes, setRecipes] =
     useState<Recipe[]>([]);
@@ -95,43 +89,15 @@ export default function MyRecipesPage() {
     setDeleteErrorMessage,
   ] = useState("");
 
-  const isGoogleLoggedIn =
-    sessionStatus === "authenticated";
-
   const isLoggedIn =
-    isMockLoggedIn || isGoogleLoggedIn;
-
-  const authorName =
-    session?.user?.name?.trim() ||
-    mockUserName ||
-    "RecipePeeker User";
+    sessionStatus ===
+    "authenticated";
 
   useEffect(() => {
-    const mockLoginStatus =
-      localStorage.getItem("isLoggedIn") ===
-      "true";
-
-    const storedMockUser =
-      localStorage
-        .getItem("mockUser")
-        ?.trim();
-
-    setIsMockLoggedIn(mockLoginStatus);
-
-    setMockUserName(
-      storedMockUser ||
-      "RecipePeeker User",
-    );
-
-    setIsAuthChecked(true);
-  }, []);
-
-  useEffect(() => {
-    if (!isAuthChecked) {
-      return;
-    }
-
-    if (sessionStatus === "loading") {
+    if (
+      sessionStatus ===
+      "loading"
+    ) {
       return;
     }
 
@@ -143,100 +109,96 @@ export default function MyRecipesPage() {
       );
     }
   }, [
-    isAuthChecked,
     isLoggedIn,
     router,
     sessionStatus,
   ]);
 
   const loadMyRecipes =
-    useCallback(async (): Promise<void> => {
-      try {
-        setIsLoading(true);
-        setErrorMessage("");
-        setSuccessMessage("");
+    useCallback(
+      async (): Promise<void> => {
+        if (!accessToken) {
+          setRecipes([]);
+          setIsLoading(false);
 
-        const response = await fetch(
-          `${API_URL}/api/recipes`,
-          {
-            method: "GET",
-            cache: "no-store",
-          },
-        );
+          setErrorMessage(
+            "Authentication token was not found. Please log in again.",
+          );
 
-        const responseText =
-          await response.text();
-
-        let result: RecipesResponse;
+          return;
+        }
 
         try {
-          result = JSON.parse(
-            responseText,
-          ) as RecipesResponse;
-        } catch {
-          throw new Error(
-            responseText ||
-            "The server returned an invalid response.",
+          setIsLoading(true);
+          setErrorMessage("");
+          setSuccessMessage("");
+
+          const response =
+            await fetch(
+              `${API_URL}/api/recipes/mine`,
+              {
+                method: "GET",
+
+                headers: {
+                  Authorization:
+                    `Bearer ${accessToken}`,
+                },
+
+                cache: "no-store",
+              },
+            );
+
+          const responseText =
+            await response.text();
+
+          let result: RecipesResponse;
+
+          try {
+            result = JSON.parse(
+              responseText,
+            ) as RecipesResponse;
+          } catch {
+            throw new Error(
+              responseText ||
+              "The server returned an invalid response.",
+            );
+          }
+
+          if (
+            !response.ok ||
+            !result.success
+          ) {
+            throw new Error(
+              result.message ||
+              "Unable to load your recipes.",
+            );
+          }
+
+          setRecipes(
+            Array.isArray(result.data)
+              ? result.data
+              : [],
           );
+        } catch (error) {
+          setRecipes([]);
+
+          setErrorMessage(
+            error instanceof Error
+              ? error.message
+              : "Unable to load your recipes.",
+          );
+        } finally {
+          setIsLoading(false);
         }
-
-        if (
-          !response.ok ||
-          !result.success
-        ) {
-          throw new Error(
-            result.message ||
-            "Unable to load your recipes.",
-          );
-        }
-
-        const allRecipes =
-          Array.isArray(result.data)
-            ? result.data
-            : [];
-
-        const normalizedAuthorName =
-          authorName
-            .toLowerCase()
-            .trim();
-
-        const myRecipes =
-          allRecipes.filter(
-            (recipe) =>
-              (
-                recipe.authorName ||
-                "RecipePeeker User"
-              )
-                .toLowerCase()
-                .trim() ===
-              normalizedAuthorName,
-          );
-
-        setRecipes(myRecipes);
-      } catch (error) {
-        console.error(
-          "Unable to load my recipes:",
-          error,
-        );
-
-        setRecipes([]);
-
-        setErrorMessage(
-          error instanceof Error
-            ? error.message
-            : "Unable to load your recipes.",
-        );
-      } finally {
-        setIsLoading(false);
-      }
-    }, [authorName]);
+      },
+      [accessToken],
+    );
 
   useEffect(() => {
-    if (!isAuthChecked) {
-      return;
-    }
-
-    if (sessionStatus === "loading") {
+    if (
+      sessionStatus ===
+      "loading"
+    ) {
       return;
     }
 
@@ -247,7 +209,6 @@ export default function MyRecipesPage() {
 
     void loadMyRecipes();
   }, [
-    isAuthChecked,
     isLoggedIn,
     loadMyRecipes,
     sessionStatus,
@@ -314,6 +275,14 @@ export default function MyRecipesPage() {
   const handleDeleteRecipe = async (
     recipe: Recipe,
   ): Promise<void> => {
+    if (!accessToken) {
+      setDeleteErrorMessage(
+        "Authentication token was not found. Please log in again.",
+      );
+
+      return;
+    }
+
     try {
       setDeletingRecipeId(recipe._id);
       setDeleteErrorMessage("");
@@ -324,6 +293,11 @@ export default function MyRecipesPage() {
         `${API_URL}/api/recipes/${recipe._id}`,
         {
           method: "DELETE",
+
+          headers: {
+            Authorization:
+              `Bearer ${accessToken}`,
+          },
         },
       );
 
@@ -362,10 +336,6 @@ export default function MyRecipesPage() {
           ),
       );
 
-      removeRecipeFromWatchlist(
-        recipe._id,
-      );
-
       setRecipeToDelete(null);
 
       setSuccessMessage(
@@ -395,8 +365,8 @@ export default function MyRecipesPage() {
   };
 
   if (
-    !isAuthChecked ||
-    sessionStatus === "loading"
+    sessionStatus ===
+    "loading"
   ) {
     return <LoadingPage />;
   }
@@ -430,15 +400,6 @@ export default function MyRecipesPage() {
             </span>
 
             <h1>My Recipes</h1>
-
-            <p>
-              View and manage recipes
-              created by{" "}
-              <strong>
-                {authorName}
-              </strong>
-              .
-            </p>
           </div>
         </header>
 
@@ -1706,72 +1667,6 @@ export default function MyRecipesPage() {
   );
 }
 
-function removeRecipeFromWatchlist(
-  recipeId: string,
-): void {
-  try {
-    const storedWatchlist =
-      localStorage.getItem(
-        "watchlist",
-      );
-
-    if (!storedWatchlist) {
-      return;
-    }
-
-    const parsedWatchlist: unknown =
-      JSON.parse(storedWatchlist);
-
-    if (
-      !Array.isArray(
-        parsedWatchlist,
-      )
-    ) {
-      return;
-    }
-
-    const updatedWatchlist =
-      parsedWatchlist.filter(
-        (item) => {
-          if (
-            typeof item !==
-            "object" ||
-            item === null
-          ) {
-            return true;
-          }
-
-          const savedItem =
-            item as {
-              id?: unknown;
-            };
-
-          return (
-            String(
-              savedItem.id,
-            ) !==
-            String(recipeId)
-          );
-        },
-      );
-
-    localStorage.setItem(
-      "watchlist",
-      JSON.stringify(
-        updatedWatchlist,
-      ),
-    );
-
-    localStorage.removeItem(
-      `reviews-${recipeId}`,
-    );
-  } catch (error) {
-    console.error(
-      "Unable to clean saved recipe data:",
-      error,
-    );
-  }
-}
 
 function LoadingPage({
   message = "Preparing your recipes...",
