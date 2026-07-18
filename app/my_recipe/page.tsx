@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 
 import Navbar from "@/app/components/Navbar";
+import { API_URL } from "@/app/lib/api";
 
 import {
   ArrowLeft,
@@ -50,10 +51,6 @@ type DeleteRecipeResponse = {
   success: boolean;
   message?: string;
 };
-
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL ??
-  "http://localhost:5000";
 
 export default function MyRecipesPage() {
   const router = useRouter();

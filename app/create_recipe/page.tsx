@@ -1,21 +1,13 @@
 "use client";
 
-import type {
-  ChangeEvent,
-  CSSProperties,
-  FormEvent,
-} from "react";
+import type {ChangeEvent, CSSProperties, FormEvent,} from "react"; 
 
-import {
-  useEffect,
-  useState,
-} from "react";
-
+import {useEffect, useState,} from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 
 import Navbar from "@/app/components/Navbar";
-
+import { API_URL } from "@/app/lib/api";
 import {
   ArrowLeft,
   ChefHat,
@@ -45,10 +37,6 @@ type CreateRecipeResponse = {
     imageUrl: string;
   };
 };
-
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL ??
-  "http://localhost:5000";
 
 const categories = [
   "Dessert",

@@ -1,21 +1,11 @@
 "use client";
 
-import type {
-  CSSProperties,
-  FormEvent,
-} from "react";
-
+import type {CSSProperties, FormEvent,} from "react";
 import { useState } from "react";
-
-import Image from "next/image";
-
-import {
-  useRouter,
-  useSearchParams,
-} from "next/navigation";
-
+import {useRouter, useSearchParams,} from "next/navigation";
+import {API_URL, parseJsonResponse,} from "@/app/lib/api";
 import { signIn } from "next-auth/react";
-
+import Image from "next/image";
 import {
   Heart,
   LockKeyhole,
@@ -45,30 +35,8 @@ type MessageType =
   | "error"
   | "";
 
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL ??
-  "http://localhost:5000";
-
 const EMAIL_PATTERN =
   /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-async function parseJsonResponse<T>(
-  response: Response,
-): Promise<T> {
-  const responseText =
-    await response.text();
-
-  try {
-    return JSON.parse(
-      responseText,
-    ) as T;
-  } catch {
-    throw new Error(
-      responseText ||
-        "The server returned an invalid response.",
-    );
-  }
-}
 
 export default function RegisterClient() {
   const router = useRouter();

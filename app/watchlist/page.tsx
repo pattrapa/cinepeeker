@@ -1,23 +1,12 @@
 "use client";
 
-import type {
-  CSSProperties,
-} from "react";
+import type {CSSProperties,} from "react";
 
-import {
-  useCallback,
-  useEffect,
-  useState,
-} from "react";
+import {useCallback, useEffect, useState,} from "react";
+import {useRouter,} from "next/navigation";
+import {useSession,} from "next-auth/react";
 
-import {
-  useRouter,
-} from "next/navigation";
-
-import {
-  useSession,
-} from "next-auth/react";
-
+import {API_URL, parseJsonResponse,} from "@/app/lib/api";
 import {
   ArrowLeft,
   ChefHat,
@@ -77,10 +66,6 @@ type MessageType =
   | "error"
   | "";
 
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL ??
-  "http://localhost:5000";
-
 const statusOptions: {
   value: SavedRecipeStatus;
   label: string;
@@ -98,24 +83,6 @@ const statusOptions: {
     label: "Favorite",
   },
 ];
-
-async function parseJsonResponse<T>(
-  response: Response,
-): Promise<T> {
-  const responseText =
-    await response.text();
-
-  try {
-    return JSON.parse(
-      responseText,
-    ) as T;
-  } catch {
-    throw new Error(
-      responseText ||
-        "The server returned an invalid response.",
-    );
-  }
-}
 
 export default function WatchlistPage() {
   const router =
